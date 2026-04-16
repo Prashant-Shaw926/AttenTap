@@ -73,3 +73,10 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Environmental variables
+.env
+
+# Firebase Google services
+google-services.json
+GoogleService-Info.plist
