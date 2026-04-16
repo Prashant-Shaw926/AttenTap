@@ -1,1 +1,11 @@
-
+export const GAME_DURATION_MS = 2 * 60 * 1000
+export const GAME_TICK_MS = 250
+export const FRUIT_VISIBLE_MS = 1400
+export const FRUIT_SPAWN_INTERVAL_MS = 700
+export const MAX_ACTIVE_FRUITS = 6
+export const FRUIT_SIZE = 72
+export const FRUIT_HIT_SLOP = 8
+export const FRUIT_SPAWN_PADDING = 24
+export const TARGET_FRUIT_SPAWN_CHANCE = 0.35
+export const MAX_SPAWN_ATTEMPTS = 20
+export const FIRESTORE_BATCH_WRITE_LIMIT = 450
