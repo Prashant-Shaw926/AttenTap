@@ -2,6 +2,7 @@ import type {FirebaseFirestoreTypes} from '@react-native-firebase/firestore'
 
 import {FIRESTORE_BATCH_WRITE_LIMIT} from '../constants/gameConfig'
 import type {
+  CaptureEvent,
   FruitEvent,
   SessionBundle,
   SessionDocument,
@@ -14,6 +15,16 @@ const SESSIONS_COLLECTION = 'sessions'
 interface FirestoreWrite {
   path: string
   data: FirebaseFirestoreTypes.DocumentData
+  merge?: boolean
+}
+
+export interface SessionFlushPayload {
+  sessionId: string
+  session?: SessionDocument
+  taps?: TapEvent[]
+  fruitEvents?: FruitEvent[]
+  captures?: CaptureEvent[]
+  mergeSession?: boolean
 }
 
 const chunkArray = <T,>(items: T[], size: number): T[][] => {
@@ -39,11 +50,22 @@ const serializeFruitEvent = (
 ): FirebaseFirestoreTypes.DocumentData => ({
   fruitType: fruitEvent.fruitType,
   isTarget: fruitEvent.isTarget,
+  slotId: fruitEvent.slotId,
   x: fruitEvent.x,
   y: fruitEvent.y,
   appearedAt: fruitEvent.appearedAt,
   disappearedAt: fruitEvent.disappearedAt,
   wasCorrectlyTapped: fruitEvent.wasCorrectlyTapped,
+})
+
+const serializeCaptureEvent = (
+  captureEvent: CaptureEvent,
+): FirebaseFirestoreTypes.DocumentData => ({
+  sessionId: captureEvent.sessionId,
+  path: captureEvent.path,
+  timestamp: captureEvent.timestamp,
+  visibleFruitIds: captureEvent.visibleFruitIds,
+  targetFruitIds: captureEvent.targetFruitIds,
 })
 
 export const getSessionPath = (sessionId: string): string =>
@@ -54,6 +76,9 @@ export const getSessionTapsPath = (sessionId: string): string =>
 
 export const getSessionFruitEventsPath = (sessionId: string): string =>
   `${getSessionPath(sessionId)}/fruitEvents`
+
+export const getSessionCapturesPath = (sessionId: string): string =>
+  `${getSessionPath(sessionId)}/captures`
 
 export const createSessionRecord = async (
   sessionId: string,
@@ -69,22 +94,42 @@ export const updateSessionRecord = async (
   await setDocument(getSessionPath(sessionId), session, {merge: true})
 }
 
-const createSessionWrites = (bundle: SessionBundle): FirestoreWrite[] => [
-  {
-    path: getSessionPath(bundle.sessionId),
-    data: bundle.session,
-  },
-  ...bundle.taps.map(tap => ({
-    path: `${getSessionTapsPath(bundle.sessionId)}/${tap.id}`,
+const createSessionWrites = ({
+  sessionId,
+  session,
+  taps = [],
+  fruitEvents = [],
+  captures = [],
+  mergeSession = true,
+}: SessionFlushPayload): FirestoreWrite[] => [
+  ...(session
+    ? [
+        {
+          path: getSessionPath(sessionId),
+          data: session,
+          merge: mergeSession,
+        },
+      ]
+    : []),
+  ...taps.map(tap => ({
+    path: `${getSessionTapsPath(sessionId)}/${tap.id}`,
     data: serializeTap(tap),
   })),
-  ...bundle.fruitEvents.map(fruitEvent => ({
-    path: `${getSessionFruitEventsPath(bundle.sessionId)}/${fruitEvent.id}`,
+  ...fruitEvents.map(fruitEvent => ({
+    path: `${getSessionFruitEventsPath(sessionId)}/${fruitEvent.id}`,
     data: serializeFruitEvent(fruitEvent),
+  })),
+  ...captures.map(capture => ({
+    path: `${getSessionCapturesPath(sessionId)}/${capture.id}`,
+    data: serializeCaptureEvent(capture),
   })),
 ]
 
 const commitWrites = async (writes: FirestoreWrite[]): Promise<void> => {
+  if (writes.length === 0) {
+    return
+  }
+
   const firestoreDb = await ensureFirestoreReady()
   const writeChunks = chunkArray(writes, FIRESTORE_BATCH_WRITE_LIMIT)
 
@@ -92,6 +137,11 @@ const commitWrites = async (writes: FirestoreWrite[]): Promise<void> => {
     const batch = firestoreDb.batch()
 
     chunk.forEach(write => {
+      if (write.merge) {
+        batch.set(firestoreDb.doc(write.path), write.data, {merge: true})
+        return
+      }
+
       batch.set(firestoreDb.doc(write.path), write.data)
     })
 
@@ -99,8 +149,21 @@ const commitWrites = async (writes: FirestoreWrite[]): Promise<void> => {
   }
 }
 
+export const flushSessionUpdates = async (
+  payload: SessionFlushPayload,
+): Promise<void> => {
+  await commitWrites(createSessionWrites(payload))
+}
+
 export const saveSessionBundle = async (
   bundle: SessionBundle,
 ): Promise<void> => {
-  await commitWrites(createSessionWrites(bundle))
+  await flushSessionUpdates({
+    sessionId: bundle.sessionId,
+    session: bundle.session,
+    taps: bundle.taps,
+    fruitEvents: bundle.fruitEvents,
+    captures: bundle.captures,
+    mergeSession: false,
+  })
 }

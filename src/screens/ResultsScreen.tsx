@@ -1,19 +1,16 @@
-
-import React, { useEffect, useRef } from 'react'
+import React, {useMemo} from 'react'
 import {
-  Animated,
-  ScrollView,
+  Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native'
-import type { StackNavigationProp } from '@react-navigation/stack'
-import type { RouteProp } from '@react-navigation/native'
+import type {StackNavigationProp} from '@react-navigation/stack'
+import type {RouteProp} from '@react-navigation/native'
+import {SafeAreaView} from 'react-native-safe-area-context'
 
-import { getFruitById } from '../constants/fruits'
-import type { RootStackParamList } from '../navigation/AppNavigator'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import type {RootStackParamList} from '../navigation/AppNavigator'
+import {Colors, Typography, Spacing, Radius, Touch, Shadows} from '../theme'
 
 type ResultsNavigationProp = StackNavigationProp<RootStackParamList, 'Results'>
 type ResultsRouteProp = RouteProp<RootStackParamList, 'Results'>
@@ -23,324 +20,278 @@ interface ResultsScreenProps {
   route: ResultsRouteProp
 }
 
-interface StatCardProps {
-  label: string
-  value: string | number
+// ── Grade helpers ─────────────────────────────────────────────────────────
+
+interface Grade {
+  letter: string
+  message: string
   color: string
-  delay: number
 }
 
-const StatCard: React.FC<StatCardProps> = ({ label, value, color, delay }) => {
-  const anim = useRef(new Animated.Value(0)).current
+const getGrade = (accuracy: number): Grade => {
+  if (accuracy >= 0.9) {
+    return {letter: 'S', message: 'Near-perfect focus. Outstanding!', color: '#F5A623'}
+  }
+  if (accuracy >= 0.75) {
+    return {letter: 'A', message: 'Strong selective attention.', color: Colors.success}
+  }
+  if (accuracy >= 0.6) {
+    return {letter: 'B', message: 'Solid pace with a few misses.', color: Colors.info}
+  }
+  if (accuracy >= 0.4) {
+    return {letter: 'C', message: 'Accuracy dipped — keep practising.', color: Colors.warning}
+  }
+  return {letter: 'D', message: 'Slow the scan down next time.', color: Colors.error}
+}
 
-  useEffect(() => {
-    Animated.spring(anim, {
-      toValue: 1,
-      tension: 140,
-      friction: 8,
-      delay,
-      useNativeDriver: true,
-    }).start()
-  }, [anim, delay])
+// ── Stat row ─────────────────────────────────────────────────────────────
 
-  return (
-    <Animated.View
-      style={[
-        styles.statCard,
-        {
-          borderColor: color,
-          opacity: anim,
-          transform: [
-            {
-              scale: anim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0.7, 1],
-              }),
-            },
-          ],
-        },
-      ]}
-    >
-      <Text style={[styles.statValue, { color }]}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </Animated.View>
+const StatRow: React.FC<{label: string; value: string | number; isLast?: boolean}> = ({
+  label,
+  value,
+  isLast,
+}) => (
+  <View style={[statStyles.row, isLast && statStyles.rowLast]}>
+    <Text style={statStyles.label}>{label}</Text>
+    <Text style={statStyles.value}>{value}</Text>
+  </View>
+)
+
+// ── Screen ────────────────────────────────────────────────────────────────
+
+const ResultsScreen: React.FC<ResultsScreenProps> = ({navigation, route}) => {
+  const {bundle} = route.params
+  const {session} = bundle
+
+  const grade = useMemo(() => getGrade(session.accuracy), [session.accuracy])
+
+  const accuracyPct = useMemo(
+    () => Math.round(session.accuracy * 100),
+    [session.accuracy],
   )
-}
 
-const getGrade = (accuracy: number): { letter: string; message: string; color: string } => {
-  if (accuracy >= 0.9) return { letter: 'S', message: 'Perfect! 🌟', color: '#FFD700' }
-  if (accuracy >= 0.75) return { letter: 'A', message: 'Amazing! 🎉', color: '#4CAF50' }
-  if (accuracy >= 0.6) return { letter: 'B', message: 'Great job! 👍', color: '#2196F3' }
-  if (accuracy >= 0.4) return { letter: 'C', message: 'Good try! 🙂', color: '#FF9800' }
-  return { letter: 'D', message: 'Keep going! 💪', color: '#FF5252' }
-}
+  const durationSeconds = useMemo(() => {
+    if (!session.endedAt || !session.startedAt) {return 0}
+    return Math.round(
+      (session.endedAt.toMillis() - session.startedAt.toMillis()) / 1000,
+    )
+  }, [session.endedAt, session.startedAt])
 
-const ResultsScreen: React.FC<ResultsScreenProps> = ({ navigation, route }) => {
-  const { bundle } = route.params
-  const { session, sessionId } = bundle
-
-  const headerAnim = useRef(new Animated.Value(0)).current
-  const gradeAnim = useRef(new Animated.Value(0)).current
-
-  const accuracyPct = Math.round(session.accuracy * 100)
-  const grade = getGrade(session.accuracy)
-  const targetFruitDef = getFruitById(session.targetFruit)
-
-  // Duration
-  const durationMs = session.endedAt && session.startedAt
-    ? session.endedAt.toMillis() - session.startedAt.toMillis()
-    : 0
-  const durationSecs = Math.round(durationMs / 1000)
-
-  useEffect(() => {
-    Animated.stagger(100, [
-      Animated.spring(headerAnim, {
-        toValue: 1,
-        tension: 150,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-      Animated.spring(gradeAnim, {
-        toValue: 1,
-        tension: 130,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start()
-  }, [gradeAnim, headerAnim])
-
-  const handlePlayAgain = () => {
-    navigation.replace('Game', { targetFruitId: session.targetFruit })
-  }
-
-  const handleHome = () => {
-    navigation.navigate('Home')
-  }
+  const stats = useMemo(
+    () => [
+      {label: 'Correct taps', value: session.correctTaps},
+      {label: 'Incorrect taps', value: session.incorrectTaps},
+      {label: 'Total taps', value: session.totalTaps},
+      {label: 'Captures', value: bundle.captures.length},
+      {label: 'Fruit events', value: bundle.fruitEvents.length},
+      {label: 'Duration', value: `${durationSeconds}s`},
+    ],
+    [session, bundle, durationSeconds],
+  )
 
   return (
-    <View style={styles.root}>
-      <SafeAreaView style={styles.safe}>
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <Animated.View
-            style={[
-              styles.header,
-              {
-                opacity: headerAnim,
-                transform: [
-                  {
-                    translateY: headerAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [-30, 0],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            <Text style={styles.emoji}>{targetFruitDef?.emoji ?? '🎯'}</Text>
-            <Text style={styles.title}>Game Over!</Text>
-            <Text style={styles.subtitle}>{grade.message}</Text>
-          </Animated.View>
+    <SafeAreaView
+      style={styles.root}
+      edges={['top', 'right', 'bottom', 'left']}
+    >
+      <View style={styles.layout}>
 
-          {/* Grade circle */}
-          <Animated.View
-            style={[
-              styles.gradeCircle,
-              {
-                borderColor: grade.color,
-                transform: [{ scale: gradeAnim }],
-                opacity: gradeAnim,
-              },
-            ]}
-          >
-            <Text style={[styles.gradeLetter, { color: grade.color }]}>
+        {/* ── Left: Grade summary ── */}
+        <View style={styles.summaryColumn}>
+          <Text style={styles.kicker}>SESSION COMPLETE</Text>
+
+          <View style={styles.gradeRow}>
+            <Text style={[styles.gradeLetter, {color: grade.color}]}>
               {grade.letter}
             </Text>
-            <Text style={styles.gradeAccuracy}>{accuracyPct}%</Text>
-          </Animated.View>
 
-          {/* Stats grid */}
-          <View style={styles.statsGrid}>
-            <StatCard
-              label="CORRECT"
-              value={session.correctTaps}
-              color="#4CAF50"
-              delay={300}
-            />
-            <StatCard
-              label="MISSED"
-              value={session.incorrectTaps}
-              color="#FF5252"
-              delay={400}
-            />
-            <StatCard
-              label="TOTAL TAPS"
-              value={session.totalTaps}
-              color="#2196F3"
-              delay={500}
-            />
-            <StatCard
-              label="DURATION"
-              value={`${durationSecs}s`}
-              color="#FF9800"
-              delay={600}
-            />
+            <View style={styles.accuracyBlock}>
+              <Text style={styles.accuracyText}>{accuracyPct}%</Text>
+              <Text style={styles.accuracyLabel}>accuracy</Text>
+            </View>
           </View>
 
-          {/* Session ID */}
-          <Text style={styles.sessionId}>Session · {sessionId.slice(-8)}</Text>
+          <Text style={styles.gradeMessage}>{grade.message}</Text>
+        </View>
 
-          {/* Actions */}
+        {/* ── Right: Stats + actions ── */}
+        <View style={styles.detailColumn}>
+          <View style={styles.statsCard}>
+            {stats.map((stat, i) => (
+              <StatRow
+                key={stat.label}
+                label={stat.label}
+                value={stat.value}
+                isLast={i === stats.length - 1}
+              />
+            ))}
+          </View>
+
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.playAgainButton}
-              onPress={handlePlayAgain}
-              activeOpacity={0.85}
+            <Pressable
+              style={({pressed}) => [
+                styles.primaryButton,
+                pressed && styles.primaryButtonPressed,
+              ]}
+              onPress={() =>
+                navigation.replace('Game', {targetFruitId: session.targetFruit})
+              }
             >
-              <Text style={styles.playAgainText}>▶ Play Again</Text>
-            </TouchableOpacity>
+              <Text style={styles.primaryButtonText}>Play Again</Text>
+            </Pressable>
 
-            <TouchableOpacity
-              style={styles.homeButton}
-              onPress={handleHome}
-              activeOpacity={0.85}
+            <Pressable
+              style={({pressed}) => [
+                styles.secondaryButton,
+                pressed && styles.secondaryButtonPressed,
+              ]}
+              onPress={() => navigation.replace('Home')}
             >
-              <Text style={styles.homeButtonText}>🏠 Home</Text>
-            </TouchableOpacity>
+              <Text style={styles.secondaryButtonText}>Home</Text>
+            </Pressable>
           </View>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+        </View>
+      </View>
+    </SafeAreaView>
   )
 }
+
+// ── Styles ────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#1A0A2E',
+    backgroundColor: Colors.bgApp,
   },
-  safe: {
+  layout: {
     flex: 1,
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    gap: Spacing.xl,
   },
-  scroll: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    gap: 24,
-  },
-  header: {
-    alignItems: 'center',
-    gap: 6,
-  },
-  emoji: {
-    fontSize: 56,
-  },
-  title: {
-    fontSize: 40,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: -1,
-  },
-  subtitle: {
-    fontSize: 20,
-    color: 'rgba(255,255,255,0.7)',
-    fontWeight: '600',
-  },
-  gradeCircle: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    borderWidth: 4,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    alignItems: 'center',
+
+  // Summary column
+  summaryColumn: {
+    flex: 1,
     justifyContent: 'center',
+    paddingLeft: Spacing.lg,
+  },
+  kicker: {
+    fontSize: Typography.xs,
+    fontWeight: Typography.weightBold,
+    letterSpacing: Typography.caps,
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+  },
+  gradeRow: {
+    marginTop: Spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: Spacing.md,
   },
   gradeLetter: {
-    fontSize: 60,
-    fontWeight: '900',
-    lineHeight: 68,
+    fontSize: Typography.giant,
+    fontWeight: Typography.weightBlack,
+    lineHeight: Typography.giant,
   },
-  gradeAccuracy: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '700',
-    letterSpacing: 1,
+  accuracyBlock: {
+    paddingBottom: Spacing.sm,
   },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
+  accuracyText: {
+    fontSize: Typography.xxl,
+    fontWeight: Typography.weightBlack,
+    color: Colors.textPrimary,
+  },
+  accuracyLabel: {
+    fontSize: Typography.base,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  gradeMessage: {
+    marginTop: Spacing.md,
+    fontSize: Typography.base,
+    lineHeight: Typography.base * Typography.relaxed,
+    color: Colors.textSecondary,
+    maxWidth: 340,
+  },
+
+  // Detail column
+  detailColumn: {
+    flex: 1.1,
     justifyContent: 'center',
-    width: '100%',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
   },
-  statCard: {
-    width: '44%',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 16,
-    borderWidth: 1.5,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 34,
-    fontWeight: '900',
-    letterSpacing: -0.5,
-  },
-  statLabel: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '700',
-    letterSpacing: 1.5,
-    marginTop: 4,
-  },
-  sessionId: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.25)',
-    fontWeight: '600',
-    letterSpacing: 0.5,
+  statsCard: {
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.bgBoard,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
   },
   actions: {
-    width: '100%',
-    gap: 12,
+    flexDirection: 'row',
+    gap: Spacing.xs,
+  },
+
+  // Buttons
+  primaryButton: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 52,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.accent,
+    ...Shadows.button,
   },
-  playAgainButton: {
-    backgroundColor: '#FFD700',
-    paddingHorizontal: 48,
-    paddingVertical: 16,
-    borderRadius: 50,
-    shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 10,
-    width: '100%',
+  primaryButtonPressed: {
+    backgroundColor: Colors.accentDark,
+    transform: [{scale: 0.97}],
+  },
+  primaryButtonText: {
+    fontSize: Typography.base,
+    fontWeight: Typography.weightBlack,
+    color: '#FFFFFF',
+  },
+  secondaryButton: {
+    flex: 1,
     alignItems: 'center',
-  },
-  playAgainText: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#1A0A2E',
-    letterSpacing: 1.5,
-  },
-  homeButton: {
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 50,
+    justifyContent: 'center',
+    minHeight: 52,
+    borderRadius: Radius.pill,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.2)',
-    width: '100%',
-    alignItems: 'center',
+    borderColor: Colors.borderLight,
   },
-  homeButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.6)',
+  secondaryButtonPressed: {
+    borderColor: Colors.accent,
+  },
+  secondaryButtonText: {
+    fontSize: Typography.base,
+    fontWeight: Typography.weightBold,
+    color: Colors.textPrimary,
+  },
+})
+
+const statStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.xs,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.borderOnLight,
+  },
+  rowLast: {
+    borderBottomWidth: 0,
+  },
+  label: {
+    fontSize: Typography.base,
+    color: Colors.textOnLightMuted,
+  },
+  value: {
+    fontSize: Typography.md,
+    fontWeight: Typography.weightBold,
+    color: Colors.textOnLight,
   },
 })
 

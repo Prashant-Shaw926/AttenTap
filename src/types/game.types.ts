@@ -25,6 +25,7 @@ export interface FruitEvent {
   id: string
   fruitType: string
   isTarget: boolean
+  slotId: string
   x: number
   y: number
   appearedAt: FirebaseFirestoreTypes.Timestamp
@@ -34,11 +35,21 @@ export interface FruitEvent {
 
 export interface FruitInstance extends FruitEvent {}
 
+export interface CaptureEvent {
+  id: string
+  sessionId: string
+  path: string
+  timestamp: FirebaseFirestoreTypes.Timestamp
+  visibleFruitIds: string[]
+  targetFruitIds: string[]
+}
+
 export interface SessionBundle {
   sessionId: string
   session: SessionDocument
   taps: TapEvent[]
   fruitEvents: FruitEvent[]
+  captures: CaptureEvent[]
 }
 
 export interface StartSessionInput {
@@ -57,6 +68,7 @@ export interface RecordFruitAppearanceInput {
   fruitId?: string
   fruitType: string
   isTarget: boolean
+  slotId: string
   x: number
   y: number
   appearedAt?: FirebaseFirestoreTypes.Timestamp
@@ -66,4 +78,13 @@ export interface RecordFruitDisappearanceInput {
   fruitId: string
   disappearedAt?: FirebaseFirestoreTypes.Timestamp
   wasCorrectlyTapped?: boolean
+}
+
+export interface RecordCaptureInput {
+  captureId?: string
+  sessionId: string
+  path: string
+  timestamp?: FirebaseFirestoreTypes.Timestamp
+  visibleFruitIds: string[]
+  targetFruitIds: string[]
 }

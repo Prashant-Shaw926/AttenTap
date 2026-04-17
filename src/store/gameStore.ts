@@ -3,11 +3,13 @@ import {create} from 'zustand'
 
 import {Timestamp} from '../config/firebase'
 import type {
+  CaptureEvent,
   DeviceInfo,
   EndSessionInput,
   FruitEvent,
   FruitInstance,
   GameStatus,
+  RecordCaptureInput,
   RecordFruitAppearanceInput,
   RecordFruitDisappearanceInput,
   SessionBundle,
@@ -24,6 +26,7 @@ export interface GameStoreState {
   session: SessionDocument | null
   taps: TapEvent[]
   fruitEvents: FruitEvent[]
+  captureEvents: CaptureEvent[]
   activeFruits: ActiveFruitMap
   startSession: (input: StartSessionInput) => string
   endSession: (input?: EndSessionInput) => SessionBundle | null
@@ -35,6 +38,7 @@ export interface GameStoreState {
   recordFruitDisappearance: (
     input: RecordFruitDisappearanceInput,
   ) => FruitEvent | null
+  recordCapture: (input: RecordCaptureInput) => CaptureEvent | null
   markFruitTapped: (fruitId: string, wasCorrectlyTapped?: boolean) => void
   clearActiveFruits: () => void
   resetGame: () => void
@@ -43,7 +47,13 @@ export interface GameStoreState {
 
 type GameStoreSlice = Pick<
   GameStoreState,
-  'status' | 'sessionId' | 'session' | 'taps' | 'fruitEvents' | 'activeFruits'
+  | 'status'
+  | 'sessionId'
+  | 'session'
+  | 'taps'
+  | 'fruitEvents'
+  | 'captureEvents'
+  | 'activeFruits'
 >
 
 const createId = (prefix: string): string =>
@@ -62,6 +72,7 @@ const getInitialState = (): GameStoreSlice => ({
   session: null,
   taps: [],
   fruitEvents: [],
+  captureEvents: [],
   activeFruits: {},
 })
 
@@ -79,7 +90,6 @@ const updateSessionStats = (
 ): SessionDocument => {
   const totalTaps = session.totalTaps + 1
   const correctTaps = session.correctTaps + (tapType === 'correct' ? 1 : 0)
-  // Background taps are still incorrect attempts at the session level.
   const incorrectTaps = session.incorrectTaps + (tapType === 'correct' ? 0 : 1)
 
   return {
@@ -124,11 +134,13 @@ const buildSessionBundle = (
   session: SessionDocument,
   taps: TapEvent[],
   fruitEvents: FruitEvent[],
+  captures: CaptureEvent[],
 ): SessionBundle => ({
   sessionId,
   session,
   taps,
   fruitEvents,
+  captures,
 })
 
 export const useGameStore = create<GameStoreState>((set, get) => ({
@@ -154,6 +166,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       },
       taps: [],
       fruitEvents: [],
+      captureEvents: [],
       activeFruits: {},
     })
 
@@ -178,6 +191,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       finalizedSession,
       state.taps,
       finalizedFruitEvents,
+      state.captureEvents,
     )
 
     set({
@@ -276,6 +290,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       id: fruitId,
       fruitType: input.fruitType,
       isTarget: input.isTarget,
+      slotId: input.slotId,
       x: input.x,
       y: input.y,
       appearedAt,
@@ -327,6 +342,29 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     return fruitEvent
   },
 
+  recordCapture: input => {
+    const state = get()
+
+    if (!state.session || !state.sessionId) {
+      return null
+    }
+
+    const captureEvent: CaptureEvent = {
+      id: input.captureId ?? createId('capture'),
+      sessionId: input.sessionId,
+      path: input.path,
+      timestamp: input.timestamp ?? createTimestamp(),
+      visibleFruitIds: input.visibleFruitIds,
+      targetFruitIds: input.targetFruitIds,
+    }
+
+    set(currentState => ({
+      captureEvents: [...currentState.captureEvents, captureEvent],
+    }))
+
+    return captureEvent
+  },
+
   markFruitTapped: (fruitId, wasCorrectlyTapped = true) => {
     set(state => {
       const activeFruit = state.activeFruits[fruitId]
@@ -373,6 +411,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       state.session,
       state.taps,
       state.fruitEvents,
+      state.captureEvents,
     )
   },
 }))
@@ -382,3 +421,4 @@ export const selectGameSession = (state: GameStoreState) => state.session
 export const selectActiveFruits = (state: GameStoreState) => state.activeFruits
 export const selectTapEvents = (state: GameStoreState) => state.taps
 export const selectFruitEvents = (state: GameStoreState) => state.fruitEvents
+export const selectCaptureEvents = (state: GameStoreState) => state.captureEvents

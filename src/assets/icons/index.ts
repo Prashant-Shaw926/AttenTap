@@ -1,2 +1,4 @@
-// Re-export SVG icons from this folder, for example:
-// export {default as WalletIcon} from './wallet.svg';
+export {default as AppleIcon} from './Apple.svg'
+export {default as BananaIcon} from './Banana.svg'
+export {default as CarrotIcon} from './Carrot.svg'
+export {default as GrapeIcon} from './Grape.svg'
