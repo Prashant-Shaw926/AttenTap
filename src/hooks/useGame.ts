@@ -1,5 +1,4 @@
 import {
-  startTransition,
   useCallback,
   useEffect,
   useRef,
@@ -158,10 +157,8 @@ export const useGame = ({
       const normalizedError =
         error instanceof Error ? error : new Error('Unexpected game error.')
 
-      startTransition(() => {
-        setLastError(normalizedError)
-        setIsPersisting(false)
-      })
+      setLastError(normalizedError)
+      setIsPersisting(false)
 
       onError?.(normalizedError)
     },
@@ -188,10 +185,8 @@ export const useGame = ({
 
   const persistSessionBundle = useCallback(
     async (bundle: SessionBundle) => {
-      startTransition(() => {
-        setIsPersisting(true)
-        setLastError(null)
-      })
+      setIsPersisting(true)
+      setLastError(null)
 
       try {
         await saveSessionBundle(bundle)
@@ -199,9 +194,7 @@ export const useGame = ({
       } catch (error) {
         reportError(error)
       } finally {
-        startTransition(() => {
-          setIsPersisting(false)
-        })
+        setIsPersisting(false)
       }
     },
     [onSessionCompleted, reportError],
@@ -287,24 +280,27 @@ export const useGame = ({
         return null
       }
 
-      clearAllTimers()
-      startTransition(() => {
+      try {
+        clearAllTimers()
         setRemainingTimeMs(GAME_DURATION_MS)
         setLastError(null)
         setIsPersisting(false)
-      })
 
-      const resolvedTargetFruit = getTargetFruitId(
-        targetFruitId ?? initialTargetFruit,
-      )
-      const nextSessionId = startSession({
-        userId,
-        targetFruit: resolvedTargetFruit,
-        deviceInfo,
-      })
+        const resolvedTargetFruit = getTargetFruitId(
+          targetFruitId ?? initialTargetFruit,
+        )
+        const nextSessionId = startSession({
+          userId,
+          targetFruit: resolvedTargetFruit,
+          deviceInfo,
+        })
 
-      await persistSessionStart(nextSessionId)
-      return nextSessionId
+        await persistSessionStart(nextSessionId)
+        return nextSessionId
+      } catch (error) {
+        reportError(error)
+        return null
+      }
     },
     [
       clearAllTimers,
@@ -366,11 +362,9 @@ export const useGame = ({
     endingSessionRef.current = false
     resetGameStore()
 
-    startTransition(() => {
-      setRemainingTimeMs(GAME_DURATION_MS)
-      setLastError(null)
-      setIsPersisting(false)
-    })
+    setRemainingTimeMs(GAME_DURATION_MS)
+    setLastError(null)
+    setIsPersisting(false)
   }, [clearAllTimers, resetGameStore])
 
   useEffect(() => {
@@ -388,9 +382,7 @@ export const useGame = ({
       const elapsedMs = Date.now() - session.startedAt.toMillis()
       const nextRemainingTimeMs = Math.max(0, GAME_DURATION_MS - elapsedMs)
 
-      startTransition(() => {
-        setRemainingTimeMs(nextRemainingTimeMs)
-      })
+      setRemainingTimeMs(nextRemainingTimeMs)
 
       if (nextRemainingTimeMs === 0) {
         clearAllTimers()

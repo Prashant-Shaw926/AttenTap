@@ -1,8 +1,12 @@
-import firestore from '@react-native-firebase/firestore';
+import firestore, {
+  FieldValue as FirestoreFieldValue,
+  Timestamp as FirestoreTimestamp,
+} from '@react-native-firebase/firestore';
 
 // Native Firebase auto-initializes using google-services.json
 
 let emulatorConnected = false;
+let settingsApplied = false;
 
 export const configureFirebase = async () => {
   const db = firestore();
@@ -13,14 +17,17 @@ export const configureFirebase = async () => {
     emulatorConnected = true;
   }
 
-  await db.settings({
-    ignoreUndefinedProperties: true,
-  });
+  if (!settingsApplied) {
+    await db.settings({
+      ignoreUndefinedProperties: true,
+    });
+    settingsApplied = true;
+  }
 
   return db;
 };
 
 export const getFirestore = () => firestore();
 
-export const FieldValue = firestore.FieldValue;
-export const Timestamp = firestore.Timestamp;
+export const FieldValue = FirestoreFieldValue;
+export const Timestamp = FirestoreTimestamp;
