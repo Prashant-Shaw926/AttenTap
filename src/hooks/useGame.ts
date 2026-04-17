@@ -1,18 +1,12 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react'
+import {AppState} from 'react-native'
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 
 import {
   FRUIT_HIT_SLOP,
   FRUIT_SIZE,
-  FRUIT_SPAWN_INTERVAL_MS,
-  FRUIT_VISIBLE_MS,
   GAME_DURATION_MS,
-  GAME_TICK_MS,
-  MAX_ACTIVE_FRUITS,
+  SESSION_FLUSH_BATCH_SIZE,
+  SESSION_FLUSH_INTERVAL_MS,
 } from '../constants/gameConfig'
 import {
   DEFAULT_TARGET_FRUIT_ID,
@@ -20,9 +14,15 @@ import {
   getRandomFruitId,
   isKnownFruit,
 } from '../constants/fruits'
-import {saveSessionBundle, createSessionRecord} from '../services/session'
+import {buildCaptureRecordInput} from '../services/camera'
+import {
+  createSessionRecord,
+  flushSessionUpdates,
+  saveSessionBundle,
+} from '../services/session'
 import {
   selectActiveFruits,
+  selectCaptureEvents,
   selectFruitEvents,
   selectGameSession,
   selectGameStatus,
@@ -36,13 +36,15 @@ import type {
   SessionBundle,
 } from '../types/game.types'
 import type {TapEvent} from '../types/tap.types'
-import {createFruitSpawnPosition, chooseFruitType} from '../utils/fruitSpawner'
 import {getNearestFruitAtPoint} from '../utils/geometry'
+import {useFruitSpawner} from './useFruitSpawner'
+import {useTimer} from './useTimer'
 
 export interface UseGameOptions {
   userId: string
   boardWidth: number
   boardHeight: number
+  fruitSize?: number
   autoStart?: boolean
   initialTargetFruit?: string
   deviceInfo?: DeviceInfo
@@ -72,6 +74,7 @@ export interface UseGameResult {
   resetGame: () => void
   spawnFruit: () => FruitEvent | null
   handleTap: (x: number, y: number) => TapEvent | null
+  handleCapture: (path: string, timestampMs: number) => void
 }
 
 const getTargetFruitId = (requestedTargetFruit?: string): string => {
@@ -90,6 +93,7 @@ export const useGame = ({
   userId,
   boardWidth,
   boardHeight,
+  fruitSize = FRUIT_SIZE,
   autoStart = false,
   initialTargetFruit,
   deviceInfo,
@@ -102,55 +106,42 @@ export const useGame = ({
   const activeFruits = useGameStore(selectActiveFruits)
   const taps = useGameStore(selectTapEvents)
   const fruitEvents = useGameStore(selectFruitEvents)
+  const captureEvents = useGameStore(selectCaptureEvents)
   const sessionId = useGameStore(state => state.sessionId)
 
   const startSession = useGameStore(state => state.startSession)
   const recordTap = useGameStore(state => state.recordTap)
+  const recordFruitAppearance = useGameStore(state => state.recordFruitAppearance)
   const recordFruitDisappearance = useGameStore(
     state => state.recordFruitDisappearance,
   )
+  const recordCapture = useGameStore(state => state.recordCapture)
   const resetGameStore = useGameStore(state => state.resetGame)
 
-  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
-    null,
-  )
-  const spawnIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const fruitTimeoutsRef = useRef<
-    Record<string, ReturnType<typeof setTimeout>>
-  >({})
-  const endingSessionRef = useRef(false)
-
-  const [remainingTimeMs, setRemainingTimeMs] = useState(GAME_DURATION_MS)
   const [isPersisting, setIsPersisting] = useState(false)
   const [lastError, setLastError] = useState<Error | null>(null)
 
+  const endingSessionRef = useRef(false)
+  const flushInFlightRef = useRef(false)
+  const pendingFlushRef = useRef(false)
+  const persistedCountsRef = useRef({
+    taps: 0,
+    fruitEvents: 0,
+    captures: 0,
+  })
+  const onSessionStartedRef = useRef(onSessionStarted)
+  const onSessionCompletedRef = useRef(onSessionCompleted)
+
+  useEffect(() => {
+    onSessionStartedRef.current = onSessionStarted
+  }, [onSessionStarted])
+
+  useEffect(() => {
+    onSessionCompletedRef.current = onSessionCompleted
+  }, [onSessionCompleted])
+
   const targetFruit = session?.targetFruit ?? getTargetFruitId(initialTargetFruit)
-  const visibleFruits = Object.values(activeFruits)
-
-  const clearFruitTimeout = useCallback((fruitId: string) => {
-    const timeout = fruitTimeoutsRef.current[fruitId]
-
-    if (!timeout) {
-      return
-    }
-
-    clearTimeout(timeout)
-    delete fruitTimeoutsRef.current[fruitId]
-  }, [])
-
-  const clearAllTimers = useCallback(() => {
-    if (countdownIntervalRef.current) {
-      clearInterval(countdownIntervalRef.current)
-      countdownIntervalRef.current = null
-    }
-
-    if (spawnIntervalRef.current) {
-      clearInterval(spawnIntervalRef.current)
-      spawnIntervalRef.current = null
-    }
-
-    Object.keys(fruitTimeoutsRef.current).forEach(clearFruitTimeout)
-  }, [clearFruitTimeout])
+  const visibleFruits = useMemo(() => Object.values(activeFruits), [activeFruits])
 
   const reportError = useCallback(
     (error: unknown) => {
@@ -158,92 +149,62 @@ export const useGame = ({
         error instanceof Error ? error : new Error('Unexpected game error.')
 
       setLastError(normalizedError)
-      setIsPersisting(false)
-
       onError?.(normalizedError)
     },
     [onError],
   )
 
-  const persistSessionStart = useCallback(
-    async (nextSessionId: string) => {
-      const currentSession = useGameStore.getState().session
-
-      if (!currentSession) {
-        return
-      }
-
-      try {
-        await createSessionRecord(nextSessionId, currentSession)
-        await onSessionStarted?.(nextSessionId)
-      } catch (error) {
-        reportError(error)
-      }
-    },
-    [onSessionStarted, reportError],
-  )
-
-  const persistSessionBundle = useCallback(
-    async (bundle: SessionBundle) => {
-      setIsPersisting(true)
-      setLastError(null)
-
-      try {
-        await saveSessionBundle(bundle)
-        await onSessionCompleted?.(bundle)
-      } catch (error) {
-        reportError(error)
-      } finally {
-        setIsPersisting(false)
-      }
-    },
-    [onSessionCompleted, reportError],
-  )
-
-  const spawnFruit = useCallback((): FruitEvent | null => {
+  const flushPendingSessionData = useCallback(async () => {
     const currentState = useGameStore.getState()
 
-    if (
-      currentState.status !== 'playing' ||
-      !currentState.session ||
-      boardWidth <= 0 ||
-      boardHeight <= 0
-    ) {
-      return null
+    if (!currentState.sessionId || !currentState.session) {
+      return
     }
 
-    if (Object.keys(currentState.activeFruits).length >= MAX_ACTIVE_FRUITS) {
-      return null
+    if (flushInFlightRef.current) {
+      pendingFlushRef.current = true
+      return
     }
 
-    const {fruitType, isTarget} = chooseFruitType(
-      currentState.session.targetFruit,
+    const pendingTaps = currentState.taps.slice(persistedCountsRef.current.taps)
+    const pendingFruitEvents = currentState.fruitEvents.slice(
+      persistedCountsRef.current.fruitEvents,
     )
-    const position = createFruitSpawnPosition(
-      {width: boardWidth, height: boardHeight},
-      Object.values(currentState.activeFruits),
-      FRUIT_SIZE,
+    const pendingCaptures = currentState.captureEvents.slice(
+      persistedCountsRef.current.captures,
     )
-    const fruitEvent = currentState.recordFruitAppearance({
-      fruitType,
-      isTarget,
-      x: position.x,
-      y: position.y,
-    })
 
-    if (!fruitEvent) {
-      return null
-    }
+    flushInFlightRef.current = true
+    setIsPersisting(true)
 
-    fruitTimeoutsRef.current[fruitEvent.id] = setTimeout(() => {
-      useGameStore.getState().recordFruitDisappearance({
-        fruitId: fruitEvent.id,
+    try {
+      await flushSessionUpdates({
+        sessionId: currentState.sessionId,
+        session: currentState.session,
+        taps: pendingTaps,
+        fruitEvents: pendingFruitEvents,
+        captures: pendingCaptures,
+        mergeSession: true,
       })
-      clearFruitTimeout(fruitEvent.id)
-    }, FRUIT_VISIBLE_MS)
 
-    return fruitEvent
-  }, [boardHeight, boardWidth, clearFruitTimeout])
+      persistedCountsRef.current = {
+        taps: currentState.taps.length,
+        fruitEvents: currentState.fruitEvents.length,
+        captures: currentState.captureEvents.length,
+      }
+      setLastError(null)
+    } catch (error) {
+      reportError(error)
+    } finally {
+      flushInFlightRef.current = false
+      setIsPersisting(false)
+
+      if (pendingFlushRef.current) {
+        pendingFlushRef.current = false
+        flushPendingSessionData().catch(() => {})
+      }
+    }
+  }, [reportError])
 
   const endGame = useCallback(async (): Promise<SessionBundle | null> => {
     if (endingSessionRef.current) {
@@ -257,7 +218,6 @@ export const useGame = ({
     }
 
     endingSessionRef.current = true
-    clearAllTimers()
 
     try {
       const bundle = currentState.endSession()
@@ -266,12 +226,50 @@ export const useGame = ({
         return null
       }
 
-      await persistSessionBundle(bundle)
+      setIsPersisting(true)
+
+      try {
+        await saveSessionBundle(bundle)
+        persistedCountsRef.current = {
+          taps: bundle.taps.length,
+          fruitEvents: bundle.fruitEvents.length,
+          captures: bundle.captures.length,
+        }
+        setLastError(null)
+      } catch (error) {
+        reportError(error)
+      } finally {
+        setIsPersisting(false)
+      }
+
+      await onSessionCompletedRef.current?.(bundle)
       return bundle
     } finally {
       endingSessionRef.current = false
     }
-  }, [clearAllTimers, persistSessionBundle])
+  }, [reportError])
+
+  const remainingTimeMs = useTimer({
+    status,
+    startedAtMillis: session?.startedAt.toMillis() ?? null,
+    durationMs: GAME_DURATION_MS,
+    onCompleted: async () => {
+      await endGame()
+    },
+  })
+
+  const {spawnFruit} = useFruitSpawner({
+    status,
+    targetFruit,
+    boardWidth,
+    boardHeight,
+    fruitSize,
+    activeFruits: visibleFruits,
+    onSpawn: recordFruitAppearance,
+    onExpire: fruitId => {
+      recordFruitDisappearance({fruitId})
+    },
+  })
 
   const startGame = useCallback(
     async (targetFruitId?: string): Promise<string | null> => {
@@ -280,12 +278,17 @@ export const useGame = ({
         return null
       }
 
-      try {
-        clearAllTimers()
-        setRemainingTimeMs(GAME_DURATION_MS)
-        setLastError(null)
-        setIsPersisting(false)
+      persistedCountsRef.current = {
+        taps: 0,
+        fruitEvents: 0,
+        captures: 0,
+      }
+      pendingFlushRef.current = false
+      flushInFlightRef.current = false
+      setLastError(null)
+      setIsPersisting(false)
 
+      try {
         const resolvedTargetFruit = getTargetFruitId(
           targetFruitId ?? initialTargetFruit,
         )
@@ -295,22 +298,26 @@ export const useGame = ({
           deviceInfo,
         })
 
-        await persistSessionStart(nextSessionId)
+        const currentSession = useGameStore.getState().session
+
+        if (currentSession) {
+          setIsPersisting(true)
+          try {
+            await createSessionRecord(nextSessionId, currentSession)
+            setLastError(null)
+          } finally {
+            setIsPersisting(false)
+          }
+        }
+
+        await onSessionStartedRef.current?.(nextSessionId)
         return nextSessionId
       } catch (error) {
         reportError(error)
         return null
       }
     },
-    [
-      clearAllTimers,
-      deviceInfo,
-      initialTargetFruit,
-      persistSessionStart,
-      reportError,
-      startSession,
-      userId,
-    ],
+    [deviceInfo, initialTargetFruit, reportError, startSession, userId],
   )
 
   const handleTap = useCallback(
@@ -324,7 +331,7 @@ export const useGame = ({
       const hitFruit = getNearestFruitAtPoint(
         {x, y},
         Object.values(currentState.activeFruits),
-        FRUIT_SIZE,
+        fruitSize,
         FRUIT_HIT_SLOP,
       )
 
@@ -345,7 +352,6 @@ export const useGame = ({
       })
 
       if (hitFruit.isTarget) {
-        clearFruitTimeout(hitFruit.id)
         recordFruitDisappearance({
           fruitId: hitFruit.id,
           wasCorrectlyTapped: true,
@@ -354,81 +360,116 @@ export const useGame = ({
 
       return tap
     },
-    [clearFruitTimeout, recordFruitDisappearance, recordTap],
+    [fruitSize, recordFruitDisappearance, recordTap],
+  )
+
+  const handleCapture = useCallback(
+    (path: string, timestampMs: number) => {
+      const currentState = useGameStore.getState()
+
+      if (
+        currentState.status !== 'playing' ||
+        !currentState.sessionId ||
+        !currentState.session
+      ) {
+        return
+      }
+
+      const activeFruitList = Object.values(currentState.activeFruits)
+      const targetFruitIds = activeFruitList
+        .filter(fruit => fruit.isTarget)
+        .map(fruit => fruit.id)
+
+      if (targetFruitIds.length === 0) {
+        return
+      }
+
+      recordCapture(
+        buildCaptureRecordInput({
+          sessionId: currentState.sessionId,
+          path,
+          timestampMs,
+          visibleFruitIds: activeFruitList.map(fruit => fruit.id),
+          targetFruitIds,
+        }),
+      )
+    },
+    [recordCapture],
   )
 
   const resetGame = useCallback(() => {
-    clearAllTimers()
     endingSessionRef.current = false
+    pendingFlushRef.current = false
+    flushInFlightRef.current = false
+    persistedCountsRef.current = {
+      taps: 0,
+      fruitEvents: 0,
+      captures: 0,
+    }
     resetGameStore()
 
-    setRemainingTimeMs(GAME_DURATION_MS)
     setLastError(null)
     setIsPersisting(false)
-  }, [clearAllTimers, resetGameStore])
+  }, [resetGameStore])
 
   useEffect(() => {
-    return () => {
-      clearAllTimers()
+    if (status !== 'playing' || !sessionId) {
+      return
     }
-  }, [clearAllTimers])
+
+    const intervalId = setInterval(() => {
+      flushPendingSessionData().catch(() => {})
+    }, SESSION_FLUSH_INTERVAL_MS)
+
+    return () => {
+      clearInterval(intervalId)
+    }
+  }, [flushPendingSessionData, sessionId, status])
 
   useEffect(() => {
     if (status !== 'playing' || !session) {
       return
     }
 
-    const tick = () => {
-      const elapsedMs = Date.now() - session.startedAt.toMillis()
-      const nextRemainingTimeMs = Math.max(0, GAME_DURATION_MS - elapsedMs)
+    const pendingWriteCount =
+      taps.length -
+      persistedCountsRef.current.taps +
+      fruitEvents.length -
+      persistedCountsRef.current.fruitEvents +
+      captureEvents.length -
+      persistedCountsRef.current.captures
 
-      setRemainingTimeMs(nextRemainingTimeMs)
-
-      if (nextRemainingTimeMs === 0) {
-        clearAllTimers()
-        endGame().catch(reportError)
-      }
+    if (pendingWriteCount >= SESSION_FLUSH_BATCH_SIZE) {
+      flushPendingSessionData().catch(() => {})
     }
-
-    tick()
-    countdownIntervalRef.current = setInterval(tick, GAME_TICK_MS)
-
-    return () => {
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current)
-        countdownIntervalRef.current = null
-      }
-    }
-  }, [clearAllTimers, endGame, reportError, session, status])
+  }, [
+    captureEvents.length,
+    flushPendingSessionData,
+    fruitEvents.length,
+    session,
+    status,
+    taps.length,
+  ])
 
   useEffect(() => {
-    if (status !== 'playing' || boardWidth <= 0 || boardHeight <= 0) {
-      return
-    }
-
-    spawnFruit()
-    spawnIntervalRef.current = setInterval(spawnFruit, FRUIT_SPAWN_INTERVAL_MS)
+    const subscription = AppState.addEventListener('change', nextState => {
+      if (nextState !== 'active') {
+        flushPendingSessionData().catch(() => {})
+      }
+    })
 
     return () => {
-      if (spawnIntervalRef.current) {
-        clearInterval(spawnIntervalRef.current)
-        spawnIntervalRef.current = null
-      }
+      subscription.remove()
     }
-  }, [boardHeight, boardWidth, spawnFruit, status])
+  }, [flushPendingSessionData])
 
   useEffect(() => {
     if (!autoStart || status !== 'idle' || !userId) {
       return
     }
 
-    const autoStartGame = async () => {
-      const requestedTargetFruit = initialTargetFruit ?? getRandomFruitId()
-      await startGame(requestedTargetFruit)
-    }
-
-    autoStartGame().catch(reportError)
-  }, [autoStart, initialTargetFruit, reportError, startGame, status, userId])
+    startGame(initialTargetFruit ?? getRandomFruitId()).catch(() => {})
+  }, [autoStart, initialTargetFruit, startGame, status, userId])
 
   return {
     status,
@@ -451,5 +492,6 @@ export const useGame = ({
     resetGame,
     spawnFruit,
     handleTap,
+    handleCapture,
   }
 }

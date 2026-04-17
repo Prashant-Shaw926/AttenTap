@@ -1,25 +1,27 @@
-
-import React, { useCallback, useRef, useState } from 'react'
+import React, {
+  startTransition,
+  useCallback,
+  useMemo,
+  useState,
+} from 'react'
 import {
-  Animated,
-  GestureResponderEvent,
+  LayoutChangeEvent,
+  Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native'
-import type { StackNavigationProp } from '@react-navigation/stack'
-import type { RouteProp } from '@react-navigation/native'
+import type {StackNavigationProp} from '@react-navigation/stack'
+import type {RouteProp} from '@react-navigation/native'
+import {SafeAreaView} from 'react-native-safe-area-context'
 
-import FruitItem from '../components/FruitItem'
-import GameTimer from '../components/GameTimer'
-import ScoreHUD from '../components/ScoreHUD'
-import TargetBanner from '../components/TargetBanner'
 import CameraCapture from '../components/CameraCapture'
-import { useGame } from '../hooks/useGame'
-import type { RootStackParamList } from '../navigation/AppNavigator'
-import type { SessionBundle } from '../types/game.types'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import {GameBoard} from '../components/GameBoard'
+import type {TapFeedback} from '../components/TapFeedbackLayer'
+import {useGame} from '../hooks/useGame'
+import type {RootStackParamList} from '../navigation/AppNavigator'
+import type {SessionBundle} from '../types/game.types'
+import {Colors, Typography, Spacing, Radius, Touch} from '../theme'
 
 type GameScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Game'>
 type GameScreenRouteProp = RouteProp<RootStackParamList, 'Game'>
@@ -29,26 +31,33 @@ interface GameScreenProps {
   route: GameScreenRouteProp
 }
 
-const TAP_FEEDBACK_DURATION = 400
-
-interface TapFeedback {
-  id: string
-  x: number
-  y: number
-  type: 'correct' | 'incorrect' | 'background'
+const TAP_FEEDBACK_DURATION = 340
+const SIDEBAR_W = 68
+const HUD_W = 76
+const FRUIT_EMOJI: Record<string, string> = {
+  apple: '\u{1F34E}',
+  banana: '\u{1F34C}',
+  carrot: '\u{1F955}',
+  grapes: '\u{1F347}',
 }
 
-const GameScreen: React.FC<GameScreenProps> = ({ navigation, route }) => {
-  const { targetFruitId = 'carrot' } = route.params ?? {}
-  const [boardSize, setBoardSize] = useState({ width: 0, height: 0 })
-  const [tapFeedbacks, setTapFeedbacks] = useState<TapFeedback[]>([])
+const clamp = (v: number, lo: number, hi: number) =>
+  Math.min(Math.max(v, lo), hi)
 
-  const hasTargetVisible = useRef(false)
+const GameScreen: React.FC<GameScreenProps> = ({navigation, route}) => {
+  const {targetFruitId = 'carrot'} = route.params ?? {}
+
+  const [boardSize, setBoardSize] = useState({width: 0, height: 0})
+  const [tapFeedbacks, setTapFeedbacks] = useState<TapFeedback[]>([])
+  const [isMuted, setIsMuted] = useState(false)
+
+  const fruitSize = useMemo(
+    () => clamp(Math.min(boardSize.width, boardSize.height) * 0.15 || 112, 76, 144),
+    [boardSize.height, boardSize.width],
+  )
 
   const handleSessionCompleted = useCallback(
-    async (bundle: SessionBundle) => {
-      navigation.replace('Results', { bundle })
-    },
+    async (bundle: SessionBundle) => navigation.replace('Results', {bundle}),
     [navigation],
   )
 
@@ -59,275 +68,408 @@ const GameScreen: React.FC<GameScreenProps> = ({ navigation, route }) => {
     correctTaps,
     incorrectTaps,
     accuracy,
+    totalTaps,
     lastError,
     targetFruitDefinition,
     handleTap,
     startGame,
     resetGame,
+    handleCapture,
+    isPersisting,
   } = useGame({
     userId: 'demo-user',
     boardWidth: boardSize.width,
     boardHeight: boardSize.height,
+    fruitSize,
     initialTargetFruit: targetFruitId,
     onSessionCompleted: handleSessionCompleted,
   })
 
-  // Track if any target fruit is currently visible
-  hasTargetVisible.current = visibleFruits.some(f => f.isTarget)
+  const visibleTargetFruitIds = useMemo(
+    () => visibleFruits.filter(f => f.isTarget).map(f => f.id),
+    [visibleFruits],
+  )
 
   const showTapFeedback = useCallback(
     (x: number, y: number, type: TapFeedback['type']) => {
-      const id = `${Date.now()}_${Math.random()}`
-      setTapFeedbacks(prev => [...prev, { id, x, y, type }])
+      const id = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+      startTransition(() => setTapFeedbacks(prev => [...prev, {id, x, y, type}]))
       setTimeout(() => {
-        setTapFeedbacks(prev => prev.filter(fb => fb.id !== id))
+        startTransition(() =>
+          setTapFeedbacks(prev => prev.filter(fb => fb.id !== id)),
+        )
       }, TAP_FEEDBACK_DURATION)
     },
     [],
   )
 
   const handleBoardTap = useCallback(
-    (e: GestureResponderEvent) => {
-      if (status !== 'playing') return
-      const { locationX, locationY } = e.nativeEvent
+    (event: any) => {
+      if (status !== 'playing') {return}
+      const {locationX, locationY} = event.nativeEvent
       const tap = handleTap(locationX, locationY)
-      if (tap) {
-        showTapFeedback(locationX, locationY, tap.type)
-      }
+      if (tap) {showTapFeedback(locationX, locationY, tap.type)}
     },
     [handleTap, showTapFeedback, status],
   )
 
   const handleFruitTap = useCallback(
     (_fruitId: string, x: number, y: number) => {
-      if (status !== 'playing') return
+      if (status !== 'playing') {return}
       const tap = handleTap(x, y)
-      if (tap) {
-        showTapFeedback(x, y, tap.type)
-      }
+      if (tap) {showTapFeedback(x, y, tap.type)}
     },
     [handleTap, showTapFeedback, status],
   )
 
+  const handleBoardLayout = useCallback((event: LayoutChangeEvent) => {
+    const {width, height} = event.nativeEvent.layout
+    setBoardSize({width, height})
+  }, [])
+
+  const handleHomePress = useCallback(() => {
+    resetGame()
+    navigation.replace('Home')
+  }, [navigation, resetGame])
+
+  const handleToggleMute = useCallback(() => setIsMuted(v => !v), [])
+
   const handleStart = useCallback(() => {
-    startGame(targetFruitId)
+    startGame(targetFruitId).catch(() => {})
   }, [startGame, targetFruitId])
 
-  const handleReset = useCallback(() => {
-    resetGame()
-  }, [resetGame])
+  const timeLabel = useMemo(() => {
+    const totalSec = Math.ceil(remainingTimeMs / 1000)
+    const m = Math.floor(totalSec / 60)
+    const s = totalSec % 60
+    return `${m}:${s.toString().padStart(2, '0')}`
+  }, [remainingTimeMs])
 
-  const isIdle = status === 'idle'
+  const isLowTime = remainingTimeMs > 0 && remainingTimeMs <= 30_000
 
   return (
-    <SafeAreaView style={styles.root}>
-      {/* Camera bonus feature - invisible, captures when target is visible */}
-      <CameraCapture isTargetVisible={hasTargetVisible.current} />
+    // SafeAreaView respects notch, status bar, and home indicator on all sides.
+    <SafeAreaView style={styles.root} edges={['top', 'right', 'bottom', 'left']}>
+      <CameraCapture
+        enabled={status === 'playing' && visibleTargetFruitIds.length > 0}
+        onCapture={handleCapture}
+      />
 
-      {/* HUD */}
-      <View style={styles.hud}>
-        <ScoreHUD
-          correctTaps={correctTaps}
-          incorrectTaps={incorrectTaps}
-          accuracy={accuracy}
-        />
-        <TargetBanner targetFruitDef={targetFruitDefinition} />
-        <GameTimer remainingTimeMs={remainingTimeMs} />
-      </View>
-
-      {/* Game board */}
-      <View
-        style={styles.board}
-        onLayout={e => {
-          const { width, height } = e.nativeEvent.layout
-          setBoardSize({ width, height })
-        }}
-        onStartShouldSetResponder={() => true}
-        onResponderGrant={handleBoardTap}
-      >
-        {visibleFruits.map(fruit => (
-          <FruitItem key={fruit.id} fruit={fruit} onTap={handleFruitTap} />
-        ))}
-
-        {/* Tap ripple feedbacks */}
-        {tapFeedbacks.map(fb => (
-          <TapRipple key={fb.id} x={fb.x} y={fb.y} type={fb.type} />
-        ))}
-
-        {/* Idle overlay */}
-        {isIdle && boardSize.width > 0 && (
-          <View style={styles.overlay}>
-            <Text style={styles.overlayEmoji}>🎯</Text>
-            <Text style={styles.overlayTitle}>Ready?</Text>
-            <Text style={styles.overlaySubtitle}>
-              Tap only the {targetFruitDefinition?.emoji}{' '}
-              {targetFruitDefinition?.label}!
-            </Text>
-            {lastError && (
-              <Text style={styles.overlayErrorText}>{lastError.message}</Text>
-            )}
-            <TouchableOpacity
-              style={styles.goButton}
-              onPress={handleStart}
-              activeOpacity={0.85}
+      <View style={styles.row}>
+        <View style={styles.sidebar}>
+          <View style={styles.btnWrap}>
+            <Pressable
+              onPress={handleHomePress}
+              hitSlop={Touch.hitSlop}
+              style={({pressed}) => [styles.btn, pressed && styles.btnPressed]}
             >
-              <Text style={styles.goButtonText}>GO!</Text>
-            </TouchableOpacity>
+              <Text style={styles.btnIcon}>{'\u2302'}</Text>
+            </Pressable>
+            <Text style={styles.sidebarBtnLabel}>Home</Text>
           </View>
-        )}
-      </View>
 
-      {/* Back button */}
-      <View>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => {
-            handleReset()
-            navigation.goBack()
-          }}
-        >
-          <Text style={styles.backButtonText}>✕ Quit</Text>
-        </TouchableOpacity>
+          <View style={styles.muteWrap}>
+            <Pressable
+              accessibilityRole="switch"
+              accessibilityLabel="Mute"
+              accessibilityState={{checked: isMuted}}
+              onPress={handleToggleMute}
+              hitSlop={Touch.hitSlop}
+              style={styles.toggleTrack}
+            >
+              <View style={[styles.toggleThumb, isMuted && styles.toggleThumbOn]} />
+            </Pressable>
+            <Text style={styles.sidebarBtnLabel}>Mute</Text>
+          </View>
+
+          <View style={styles.targetBadge}>
+            <Text style={styles.targetMeta}>TARGET</Text>
+            <Text style={styles.targetEmoji}>
+              {FRUIT_EMOJI[targetFruitDefinition?.id ?? 'carrot'] ?? '\u{1F955}'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.boardWrap}>
+          <GameBoard
+            fruits={visibleFruits}
+            fruitSize={fruitSize}
+            feedbacks={tapFeedbacks}
+            onLayout={handleBoardLayout}
+            onBoardTap={handleBoardTap}
+            onFruitTap={handleFruitTap}
+          >
+            {status === 'idle' && (
+              <IdleOverlay
+                targetLabel={targetFruitDefinition?.label?.toLowerCase()}
+                onStart={handleStart}
+              />
+            )}
+            {lastError && <ErrorBanner message={lastError.message} />}
+          </GameBoard>
+        </View>
+
+        <View style={styles.hud}>
+          <StatTile
+            label="TIME"
+            value={timeLabel}
+            valueColor={isLowTime ? Colors.timerLow : Colors.textPrimary}
+          />
+          <StatTile label="HITS" value={String(correctTaps)} valueColor={Colors.success} />
+          <StatTile label="MISSES" value={String(incorrectTaps)} valueColor={Colors.error} />
+          <StatTile label="ACCURACY" value={`${Math.round(accuracy * 100)}%`} />
+          <StatTile label="TAPS" value={String(totalTaps)} />
+          {isPersisting && <View style={styles.savingDot} />}
+        </View>
       </View>
     </SafeAreaView>
   )
 }
 
-// Animated ripple shown at tap position
-const TapRipple: React.FC<{ x: number; y: number; type: TapFeedback['type'] }> =
-  ({ x, y, type }) => {
-    const scale = useRef(new Animated.Value(0.2)).current
-    const opacity = useRef(new Animated.Value(1)).current
+const StatTile: React.FC<{label: string; value: string; valueColor?: string}> = ({
+  label,
+  value,
+  valueColor,
+}) => (
+  <View style={tileS.root}>
+    <Text style={tileS.label}>{label}</Text>
+    <Text style={[tileS.value, valueColor ? {color: valueColor} : null]}>{value}</Text>
+  </View>
+)
 
-    React.useEffect(() => {
-      Animated.parallel([
-        Animated.timing(scale, {
-          toValue: 2.2,
-          duration: TAP_FEEDBACK_DURATION,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: TAP_FEEDBACK_DURATION,
-          useNativeDriver: true,
-        }),
-      ]).start()
-    }, [opacity, scale])
+const IdleOverlay: React.FC<{targetLabel?: string; onStart: () => void}> = ({
+  targetLabel,
+  onStart,
+}) => (
+  <View style={idleS.root}>
+    <Text style={idleS.eyebrow}>READY</Text>
+    <Text style={idleS.title}>
+      <Text style={idleS.titleLight}>{'Tap only\nthe '}</Text>
+      <Text style={idleS.accent}>{targetLabel ?? 'target'}</Text>
+    </Text>
+    <Text style={idleS.sub}>{'2:00 duration \u00B7 stay fast \u00B7 stay accurate'}</Text>
+    <Pressable
+      onPress={onStart}
+      style={({pressed}) => [idleS.btn, pressed && idleS.btnPressed]}
+    >
+      <Text style={idleS.btnText}>Start Session</Text>
+    </Pressable>
+  </View>
+)
 
-    const color =
-      type === 'correct'
-        ? '#4CAF50'
-        : type === 'incorrect'
-        ? '#FF5252'
-        : 'rgba(255,255,255,0.3)'
-
-    return (
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.ripple,
-          {
-            left: x - 24,
-            top: y - 24,
-            borderColor: color,
-            backgroundColor: `${color}22`,
-            transform: [{ scale }],
-            opacity,
-          },
-        ]}
-      />
-    )
-  }
+const ErrorBanner: React.FC<{message: string}> = ({message}) => (
+  <View style={errS.root}>
+    <Text style={errS.text}>{message}</Text>
+  </View>
+)
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#1A0A2E',
+    backgroundColor: Colors.bgApp,
   },
-  hud: {
-    flexDirection: 'row',
+row: {
+  flex: 1,
+  flexDirection: 'row',
+  gap: Spacing.xs,           // ← ADD: ensure gap between sidebar and board
+  paddingHorizontal: Spacing.xs, // ← ADD: small outer padding
+},
+sidebar: {
+  width: SIDEBAR_W,          // keep explicit width
+  flexShrink: 0,             // ← ADD: prevent flex from shrinking it
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  paddingVertical: Spacing.sm,
+  backgroundColor: Colors.bgRail,
+  borderRadius: Radius.xl,
+  zIndex: 1,                 // ← ADD: ensure it sits above nothing
+},
+  btnWrap: {
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    zIndex: 20,
   },
-  board: {
-    flex: 1,
-    position: 'relative',
-    backgroundColor: '#2D1B4E',
-    overflow: 'hidden',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(26,10,46,0.88)',
-    gap: 12,
-    zIndex: 30,
-  },
-  overlayEmoji: {
-    fontSize: 64,
-  },
-  overlayTitle: {
-    fontSize: 42,
-    fontWeight: '900',
-    color: '#FFD700',
-    letterSpacing: -1,
-  },
-  overlaySubtitle: {
-    fontSize: 18,
-    color: 'rgba(255,255,255,0.8)',
+  sidebarBtnLabel: {
+    fontSize: 10,
+    fontWeight: Typography.weightBold,
+    letterSpacing: 0.5,
+    color: Colors.textSecondary,
+    marginTop: 4,
     textAlign: 'center',
-    fontWeight: '600',
   },
-  overlayErrorText: {
-    color: '#FF8A80',
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'center',
-    paddingHorizontal: 24,
-    maxWidth: 320,
-  },
-  goButton: {
-    backgroundColor: '#FFD700',
-    paddingHorizontal: 52,
-    paddingVertical: 16,
-    borderRadius: 50,
-    marginTop: 8,
-    shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 10,
-  },
-  goButtonText: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#1A0A2E',
-    letterSpacing: 3,
-  },
-  ripple: {
-    position: 'absolute',
+  btn: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    borderWidth: 2,
-    zIndex: 50,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  backButton: {
+  btnPressed: {
+    opacity: 0.7,
+    transform: [{scale: 0.95}],
+  },
+  btnIcon: {
+    fontSize: 20,
+    color: '#fff',
+  },
+  muteWrap: {
+    alignItems: 'center',
+  },
+  toggleTrack: {
+    width: 36,
+    height: 20,
+    backgroundColor: Colors.surfaceMid,
+    borderRadius: Radius.pill,
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  toggleThumb: {
+    width: 16,
+    height: 16,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.textSecondary,
+  },
+  toggleThumbOn: {
+    backgroundColor: Colors.accent,
+    alignSelf: 'flex-end',
+  },
+  targetBadge: {
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceLight,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.xs,
+    width: 52,
+  },
+  targetMeta: {
+    fontSize: 8,
+    fontWeight: Typography.weightBold,
+    letterSpacing: 1.2,
+    color: Colors.textSecondary,
+    marginBottom: 2,
+  },
+  targetEmoji: {
+    fontSize: 26,
+  },
+boardWrap: {
+  flex: 1,
+  minWidth: 0,               // ← ADD: critical — prevents flex child overflow
+  borderRadius: Radius.xl,
+  overflow: 'hidden',        // ← keep
+},
+hud: {
+  width: HUD_W,
+  backgroundColor: Colors.bgRail,
+  borderRadius: Radius.xl,
+  paddingHorizontal: 6,
+    paddingVertical: Spacing.xs,
+    gap: 6,
+    justifyContent: 'space-evenly',
+  },
+  savingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.warning,
     alignSelf: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    marginBottom: 8,
   },
-  backButtonText: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 1,
+})
+
+const tileS = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: Colors.surfaceMid,
+    borderRadius: Radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
+  },
+  label: {
+    fontSize: 8,
+    fontWeight: Typography.weightBold,
+    letterSpacing: 0.8,
+    color: Colors.textSecondary,
+    marginBottom: 1,
+    textAlign: 'center',
+  },
+  value: {
+    fontSize: 16,
+    fontWeight: Typography.weightBlack,
+    color: Colors.textPrimary,
+    lineHeight: 20,
+  },
+})
+
+const idleS = StyleSheet.create({
+  root: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: Colors.bgBoard,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.sm,
+    zIndex: 10,
+  },
+  eyebrow: {
+    fontSize: Typography.xs,
+    fontWeight: Typography.weightBold,
+    letterSpacing: Typography.caps,
+    color: Colors.textSecondary,
+  },
+  title: {
+    fontSize: 40,
+    fontWeight: Typography.weightBlack,
+    lineHeight: 46,
+    color: Colors.textOnLight,
+  },
+  titleLight: {
+    fontWeight: Typography.weightRegular,
+  },
+  accent: {
+    color: Colors.accent,
+  },
+  sub: {
+    fontSize: Typography.base,
+    color: Colors.textOnLightMuted,
+  },
+  btn: {
+    marginTop: Spacing.sm,
+    alignSelf: 'flex-start',
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.accent,
+    minHeight: Touch.minSize,
+    justifyContent: 'center',
+  },
+  btnPressed: {
+    backgroundColor: Colors.accentDark,
+    transform: [{scale: 0.97}],
+  },
+  btnText: {
+    fontSize: Typography.md,
+    fontWeight: Typography.weightBlack,
+    color: '#fff',
+    letterSpacing: 0.3,
+  },
+})
+
+const errS = StyleSheet.create({
+  root: {
+    position: 'absolute',
+    bottom: Spacing.md,
+    left: Spacing.md,
+    right: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.errorSoft,
+    borderWidth: 1,
+    borderColor: 'rgba(244,100,92,0.22)',
+    zIndex: 30,
+  },
+  text: {
+    fontSize: Typography.sm,
+    fontWeight: Typography.weightBold,
+    color: Colors.error,
+    textAlign: 'center',
   },
 })
 
