@@ -68,16 +68,16 @@ const serializeCaptureEvent = (
   targetFruitIds: captureEvent.targetFruitIds,
 })
 
-export const getSessionPath = (sessionId: string): string =>
+const getSessionPath = (sessionId: string): string =>
   `${SESSIONS_COLLECTION}/${sessionId}`
 
-export const getSessionTapsPath = (sessionId: string): string =>
+const getSessionTapsPath = (sessionId: string): string =>
   `${getSessionPath(sessionId)}/taps`
 
-export const getSessionFruitEventsPath = (sessionId: string): string =>
+const getSessionFruitEventsPath = (sessionId: string): string =>
   `${getSessionPath(sessionId)}/fruitEvents`
 
-export const getSessionCapturesPath = (sessionId: string): string =>
+const getSessionCapturesPath = (sessionId: string): string =>
   `${getSessionPath(sessionId)}/captures`
 
 export const createSessionRecord = async (
@@ -87,14 +87,7 @@ export const createSessionRecord = async (
   await setDocument(getSessionPath(sessionId), session)
 }
 
-export const updateSessionRecord = async (
-  sessionId: string,
-  session: SessionDocument,
-): Promise<void> => {
-  await setDocument(getSessionPath(sessionId), session, {merge: true})
-}
-
-const createSessionWrites = ({
+export const buildSessionWrites = ({
   sessionId,
   session,
   taps = [],
@@ -152,7 +145,7 @@ const commitWrites = async (writes: FirestoreWrite[]): Promise<void> => {
 export const flushSessionUpdates = async (
   payload: SessionFlushPayload,
 ): Promise<void> => {
-  await commitWrites(createSessionWrites(payload))
+  await commitWrites(buildSessionWrites(payload))
 }
 
 export const saveSessionBundle = async (

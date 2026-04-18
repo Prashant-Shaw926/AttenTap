@@ -1,26 +1,20 @@
-/**
- * CameraCapture
- * Invisible 1×1 camera view that fires periodic captures during gameplay.
- * No visual output – purely a capture controller.
- */
 import React from 'react'
 import {StyleSheet, View} from 'react-native'
 import {Camera} from 'react-native-vision-camera'
 
-import {CAMERA_CAPTURE_INTERVAL_MS} from '../constants/gameConfig'
-import {useCameraCapture} from '../hooks/useCamera'
+import {CAMERA_CAPTURE_INTERVAL_MS} from '../../../constants/gameConfig'
+import {theme} from '../../../theme'
+import {useCameraCapture} from '../../../hooks/useCamera'
 
-interface CameraCaptureProps {
+interface GameCameraCaptureProps {
   enabled: boolean
   onCapture: (path: string, timestampMs: number) => void
-  captureIntervalMs?: number
 }
 
-const CameraCapture: React.FC<CameraCaptureProps> = ({
+export function GameCameraCapture({
   enabled,
   onCapture,
-  captureIntervalMs = CAMERA_CAPTURE_INTERVAL_MS,
-}) => {
+}: GameCameraCaptureProps) {
   const {
     hasPermission,
     device,
@@ -29,7 +23,11 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     handleStarted,
     handleStopped,
     handleError,
-  } = useCameraCapture({enabled, captureIntervalMs, onCapture})
+  } = useCameraCapture({
+    enabled,
+    captureIntervalMs: CAMERA_CAPTURE_INTERVAL_MS,
+    onCapture,
+  })
 
   if (!hasPermission || !device) {
     return null
@@ -53,15 +51,13 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
 const styles = StyleSheet.create({
   hidden: {
     position: 'absolute',
-    width: 1,
-    height: 1,
+    width: theme.layout.landscape.capturePreviewSize,
+    height: theme.layout.landscape.capturePreviewSize,
     opacity: 0,
     overflow: 'hidden',
   },
   camera: {
-    width: 1,
-    height: 1,
+    width: theme.layout.landscape.capturePreviewSize,
+    height: theme.layout.landscape.capturePreviewSize,
   },
 })
-
-export default CameraCapture

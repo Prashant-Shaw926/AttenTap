@@ -1,19 +1,9 @@
-/**
- * FruitSprite
- * Renders a single fruit on the board.
- * Animates in with a spring scale + fade – kept deliberately lightweight.
- */
 import React, {memo, useEffect, useRef} from 'react'
-import {
-  Animated,
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native'
+import {Animated, Pressable, StyleSheet, View} from 'react-native'
 
-import {getFruitById} from '../constants/fruits'
-import type {FruitInstance} from '../types/game.types'
-import {Touch} from '../theme'
+import {getFruitById} from '../../../constants/fruits'
+import type {FruitInstance} from '../../../types/game.types'
+import {theme} from '../../../theme'
 
 interface FruitSpriteProps {
   fruit: FruitInstance
@@ -21,13 +11,8 @@ interface FruitSpriteProps {
   onTap: (fruitId: string, x: number, y: number) => void
 }
 
-const FruitSpriteComponent: React.FC<FruitSpriteProps> = ({
-  fruit,
-  size,
-  onTap,
-}) => {
+function FruitSpriteComponent({fruit, size, onTap}: FruitSpriteProps) {
   const definition = getFruitById(fruit.fruitType)
-
   const scale = useRef(new Animated.Value(0.85)).current
   const opacity = useRef(new Animated.Value(0)).current
 
@@ -45,10 +30,11 @@ const FruitSpriteComponent: React.FC<FruitSpriteProps> = ({
         useNativeDriver: true,
       }),
     ]).start()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])   // intentional: only run on mount
+  }, [opacity, scale])
 
-  if (!definition) {return null}
+  if (!definition) {
+    return null
+  }
 
   const Icon = definition.Icon
 
@@ -67,8 +53,8 @@ const FruitSpriteComponent: React.FC<FruitSpriteProps> = ({
       ]}
     >
       <Pressable
+        hitSlop={theme.touch.hitSlop}
         onPress={() => onTap(fruit.id, fruit.x, fruit.y)}
-        hitSlop={Touch.hitSlop}
         style={styles.pressable}
       >
         <View style={styles.surface}>

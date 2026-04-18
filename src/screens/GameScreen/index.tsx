@@ -1,0 +1,180 @@
+import React, {useCallback, useMemo, useState} from 'react'
+import {
+  StyleSheet,
+  View,
+  type GestureResponderEvent,
+  type LayoutChangeEvent,
+} from 'react-native'
+
+import {AppScreen} from '../../components/common'
+import {FRUIT_SIZE} from '../../constants/gameConfig'
+import {useGame} from '../../hooks/useGame'
+import type {GameScreenProps} from '../../navigation/types'
+import type {SessionBundle} from '../../types/game.types'
+import {theme} from '../../theme'
+import {GameBoard} from './components/GameBoard'
+import {GameCameraCapture} from './components/GameCameraCapture'
+import {GameErrorBanner} from './components/GameErrorBanner'
+import {GameHudRail} from './components/GameHudRail'
+import {GameIdleOverlay} from './components/GameIdleOverlay'
+import {GameSidebarRail} from './components/GameSidebarRail'
+import {useTapFeedbackQueue} from './hooks/useTapFeedbackQueue'
+
+const clamp = (value: number, minimum: number, maximum: number) =>
+  Math.min(Math.max(value, minimum), maximum)
+
+export default function GameScreen({navigation, route}: GameScreenProps) {
+  const targetFruitId = route.params?.targetFruitId ?? 'carrot'
+  const [boardSize, setBoardSize] = useState({width: 0, height: 0})
+  const [isMuted, setIsMuted] = useState(false)
+  const {feedbacks, addFeedback} = useTapFeedbackQueue()
+
+  const fruitSize = useMemo(
+    () =>
+      clamp(
+        Math.min(boardSize.width, boardSize.height) *
+          theme.layout.landscape.fruitScaleRatio || FRUIT_SIZE,
+        theme.layout.landscape.fruitMinSize,
+        theme.layout.landscape.fruitMaxSize,
+      ),
+    [boardSize.height, boardSize.width],
+  )
+
+  const handleSessionCompleted = useCallback(
+    async (bundle: SessionBundle) => navigation.replace('Result', {bundle}),
+    [navigation],
+  )
+
+  const {
+    status,
+    visibleFruits,
+    remainingTimeMs,
+    correctTaps,
+    incorrectTaps,
+    accuracy,
+    totalTaps,
+    lastError,
+    targetFruitDefinition,
+    handleTap,
+    startGame,
+    resetGame,
+    handleCapture,
+    isPersisting,
+  } = useGame({
+    userId: 'demo-user',
+    boardWidth: boardSize.width,
+    boardHeight: boardSize.height,
+    fruitSize,
+    initialTargetFruit: targetFruitId,
+    onSessionCompleted: handleSessionCompleted,
+  })
+
+  const hasVisibleTargetFruit = useMemo(
+    () => visibleFruits.some(fruit => fruit.isTarget),
+    [visibleFruits],
+  )
+
+  const handleBoardLayout = useCallback((event: LayoutChangeEvent) => {
+    const {width, height} = event.nativeEvent.layout
+    setBoardSize({width, height})
+  }, [])
+
+  const handleBoardTap = useCallback(
+    (event: GestureResponderEvent) => {
+      if (status !== 'playing') {
+        return
+      }
+
+      const {locationX, locationY} = event.nativeEvent
+      const tap = handleTap(locationX, locationY)
+
+      if (tap) {
+        addFeedback(locationX, locationY, tap.type)
+      }
+    },
+    [addFeedback, handleTap, status],
+  )
+
+  const handleFruitTap = useCallback(
+    (_fruitId: string, x: number, y: number) => {
+      if (status !== 'playing') {
+        return
+      }
+
+      const tap = handleTap(x, y)
+
+      if (tap) {
+        addFeedback(x, y, tap.type)
+      }
+    },
+    [addFeedback, handleTap, status],
+  )
+
+  return (
+    <AppScreen>
+      <GameCameraCapture
+        enabled={status === 'playing' && hasVisibleTargetFruit}
+        onCapture={handleCapture}
+      />
+
+      <View style={styles.layout}>
+        <GameSidebarRail
+          targetFruit={targetFruitDefinition}
+          isMuted={isMuted}
+          onHomePress={() => {
+            resetGame()
+            navigation.replace('Home')
+          }}
+          onToggleMute={() => setIsMuted(value => !value)}
+        />
+
+        <View style={styles.boardWrap}>
+          <GameBoard
+            fruits={visibleFruits}
+            fruitSize={fruitSize}
+            feedbacks={feedbacks}
+            onLayout={handleBoardLayout}
+            onBoardTap={handleBoardTap}
+            onFruitTap={handleFruitTap}
+          >
+            {status === 'idle' ? (
+              <GameIdleOverlay
+                targetLabel={targetFruitDefinition?.label?.toLowerCase()}
+                onStart={() => {
+                  startGame(targetFruitId).catch(() => {})
+                }}
+              />
+            ) : null}
+
+            {lastError ? <GameErrorBanner message={lastError.message} /> : null}
+          </GameBoard>
+        </View>
+
+        <GameHudRail
+          remainingTimeMs={remainingTimeMs}
+          correctTaps={correctTaps}
+          incorrectTaps={incorrectTaps}
+          accuracy={accuracy}
+          totalTaps={totalTaps}
+          isPersisting={isPersisting}
+        />
+      </View>
+    </AppScreen>
+  )
+}
+
+const styles = StyleSheet.create({
+  layout: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: theme.layout.landscape.railGap,
+    paddingHorizontal: theme.layout.landscape.outerPadding,
+    paddingVertical: theme.layout.landscape.outerPadding,
+  },
+  boardWrap: {
+    flex: 1,
+    minWidth: 0,
+    borderRadius: theme.layout.landscape.boardBorderRadius,
+    overflow: 'hidden',
+  },
+})

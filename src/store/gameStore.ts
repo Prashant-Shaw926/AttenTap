@@ -30,7 +30,6 @@ export interface GameStoreState {
   activeFruits: ActiveFruitMap
   startSession: (input: StartSessionInput) => string
   endSession: (input?: EndSessionInput) => SessionBundle | null
-  setTargetFruit: (targetFruit: string) => void
   recordTap: (input: RecordTapInput) => TapEvent | null
   recordFruitAppearance: (
     input: RecordFruitAppearanceInput,
@@ -39,10 +38,7 @@ export interface GameStoreState {
     input: RecordFruitDisappearanceInput,
   ) => FruitEvent | null
   recordCapture: (input: RecordCaptureInput) => CaptureEvent | null
-  markFruitTapped: (fruitId: string, wasCorrectlyTapped?: boolean) => void
-  clearActiveFruits: () => void
   resetGame: () => void
-  getSessionBundle: () => SessionBundle | null
 }
 
 type GameStoreSlice = Pick<
@@ -203,22 +199,6 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
     return sessionBundle
   },
-
-  setTargetFruit: targetFruit => {
-    set(state => {
-      if (!state.session) {
-        return state
-      }
-
-      return {
-        session: {
-          ...state.session,
-          targetFruit,
-        },
-      }
-    })
-  },
-
   recordTap: input => {
     const state = get()
 
@@ -364,55 +344,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
     return captureEvent
   },
-
-  markFruitTapped: (fruitId, wasCorrectlyTapped = true) => {
-    set(state => {
-      const activeFruit = state.activeFruits[fruitId]
-
-      if (!activeFruit) {
-        return state
-      }
-
-      return {
-        fruitEvents: updateFruitEventList(state.fruitEvents, fruitId, fruit => ({
-          ...fruit,
-          wasCorrectlyTapped,
-        })),
-        activeFruits: {
-          ...state.activeFruits,
-          [fruitId]: {
-            ...activeFruit,
-            wasCorrectlyTapped,
-          },
-        },
-      }
-    })
-  },
-
-  clearActiveFruits: () => {
-    set({
-      activeFruits: {},
-    })
-  },
-
   resetGame: () => {
     set(getInitialState())
-  },
-
-  getSessionBundle: () => {
-    const state = get()
-
-    if (!state.sessionId || !state.session) {
-      return null
-    }
-
-    return buildSessionBundle(
-      state.sessionId,
-      state.session,
-      state.taps,
-      state.fruitEvents,
-      state.captureEvents,
-    )
   },
 }))
 
