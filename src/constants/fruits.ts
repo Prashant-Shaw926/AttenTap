@@ -31,17 +31,34 @@ export const getFruitById = (fruitId: string): FruitDefinition | undefined =>
 export const isKnownFruit = (fruitId: string): fruitId is FruitId =>
   FRUITS.some(fruit => fruit.id === fruitId)
 
+export const resolveFruitId = (
+  fruitId?: string,
+  fallback: FruitId = DEFAULT_TARGET_FRUIT_ID,
+): FruitId => {
+  if (fruitId && isKnownFruit(fruitId)) {
+    return fruitId
+  }
+
+  return fallback
+}
+
 export const getRandomFruit = (): FruitDefinition =>
   FRUITS[Math.floor(Math.random() * FRUITS.length)]
 
 export const getRandomFruitId = (): FruitId => getRandomFruit().id
 
-export const getRandomNonTargetFruitId = (targetFruitId: string): FruitId => {
-  const nonTargetFruits = FRUITS.filter(fruit => fruit.id !== targetFruitId)
+export const getRandomNonTargetFruitId = (
+  excludedIds: string | string[],
+): FruitId => {
+  const idsToExclude = Array.isArray(excludedIds) ? excludedIds : [excludedIds]
+  const availableFruits = FRUITS.filter(
+    fruit => !idsToExclude.includes(fruit.id),
+  )
 
-  if (nonTargetFruits.length === 0) {
+  if (availableFruits.length === 0) {
+    // If we somehow excluded everything, just return a default
     return DEFAULT_TARGET_FRUIT_ID
   }
 
-  return nonTargetFruits[Math.floor(Math.random() * nonTargetFruits.length)].id
+  return availableFruits[Math.floor(Math.random() * availableFruits.length)].id
 }

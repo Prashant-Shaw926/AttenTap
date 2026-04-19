@@ -1,5 +1,6 @@
-import React, {memo, useEffect, useRef} from 'react'
-import {Animated, Pressable, StyleSheet, View} from 'react-native'
+import React, {memo} from 'react'
+import {Pressable, StyleSheet, View} from 'react-native'
+import Animated, {ZoomIn, ZoomOut} from 'react-native-reanimated'
 
 import {getFruitById} from '../../../constants/fruits'
 import type {FruitInstance} from '../../../types/game.types'
@@ -13,24 +14,6 @@ interface FruitSpriteProps {
 
 function FruitSpriteComponent({fruit, size, onTap}: FruitSpriteProps) {
   const definition = getFruitById(fruit.fruitType)
-  const scale = useRef(new Animated.Value(0.85)).current
-  const opacity = useRef(new Animated.Value(0)).current
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scale, {
-        toValue: 1,
-        tension: 240,
-        friction: 13,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 120,
-        useNativeDriver: true,
-      }),
-    ]).start()
-  }, [opacity, scale])
 
   if (!definition) {
     return null
@@ -40,6 +23,8 @@ function FruitSpriteComponent({fruit, size, onTap}: FruitSpriteProps) {
 
   return (
     <Animated.View
+      entering={ZoomIn.duration(320).springify().damping(12).stiffness(100)}
+      exiting={ZoomOut.duration(80)}
       style={[
         styles.root,
         {
@@ -47,8 +32,6 @@ function FruitSpriteComponent({fruit, size, onTap}: FruitSpriteProps) {
           height: size,
           left: fruit.x - size / 2,
           top: fruit.y - size / 2,
-          opacity,
-          transform: [{scale}],
         },
       ]}
     >

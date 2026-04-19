@@ -5,6 +5,9 @@ import {
   SESSION_FLUSH_BATCH_SIZE,
   SESSION_FLUSH_INTERVAL_MS,
 } from '../../constants/gameConfig'
+import {
+  getRandomFruitId,
+} from '../../constants/fruits'
 import type {
   DeviceInfo,
   GameStatus,
@@ -23,11 +26,9 @@ interface UseSessionPersistenceOptions {
   captureEventsCount: number
   deviceInfo?: DeviceInfo
   fruitEventsCount: number
-  initialTargetFruit?: string
   onError?: (error: Error) => void
   onSessionCompleted?: (bundle: SessionBundle) => void | Promise<void>
   onSessionStarted?: (sessionId: string) => void | Promise<void>
-  resolveTargetFruitId: (requestedTargetFruit?: string) => string
   session: SessionDocument | null
   sessionId: string | null
   status: GameStatus
@@ -40,11 +41,9 @@ export function useSessionPersistence({
   captureEventsCount,
   deviceInfo,
   fruitEventsCount,
-  initialTargetFruit,
   onError,
   onSessionCompleted,
   onSessionStarted,
-  resolveTargetFruitId,
   session,
   sessionId,
   status,
@@ -183,7 +182,7 @@ export function useSessionPersistence({
   }, [reportError])
 
   const startGame = useCallback(
-    async (targetFruitId?: string): Promise<string | null> => {
+    async (): Promise<string | null> => {
       if (!userId) {
         reportError(new Error('A userId is required to start a game session.'))
         return null
@@ -200,9 +199,7 @@ export function useSessionPersistence({
       setIsPersisting(false)
 
       try {
-        const resolvedTargetFruit = resolveTargetFruitId(
-          targetFruitId ?? initialTargetFruit,
-        )
+        const resolvedTargetFruit = getRandomFruitId()
         const nextSessionId = startSession({
           userId,
           targetFruit: resolvedTargetFruit,
@@ -228,7 +225,7 @@ export function useSessionPersistence({
         return null
       }
     },
-    [deviceInfo, initialTargetFruit, reportError, resolveTargetFruitId, startSession, userId],
+    [deviceInfo, reportError, startSession, userId],
   )
 
   const resetGame = useCallback(() => {
@@ -302,8 +299,8 @@ export function useSessionPersistence({
       return
     }
 
-    startGame(initialTargetFruit).catch(() => {})
-  }, [autoStart, initialTargetFruit, startGame, status, userId])
+    startGame().catch(() => {})
+  }, [autoStart, startGame, status, userId])
 
   return {
     endGame,

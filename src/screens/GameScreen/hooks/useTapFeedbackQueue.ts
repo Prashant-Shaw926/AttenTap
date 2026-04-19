@@ -1,25 +1,32 @@
-import {startTransition, useCallback, useRef, useState} from 'react'
+import {useCallback, useEffect, useRef, useState} from 'react'
+import uuid from 'react-native-uuid'
 
 import type {TapFeedback} from '../components/TapFeedbackLayer'
 
-const TAP_FEEDBACK_DURATION_MS = 340
+const TAP_FEEDBACK_DURATION_MS = 1000 // Keep in state longer to allow for exiting animations
 
 export const useTapFeedbackQueue = () => {
   const [feedbacks, setFeedbacks] = useState<TapFeedback[]>([])
   const timeoutIdsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
+  // Cleanup all timeouts on unmount
+  useEffect(() => {
+    const currentTimeouts = timeoutIdsRef.current
+    return () => {
+      Object.values(currentTimeouts).forEach(clearTimeout)
+    }
+  }, [])
+
   const addFeedback = useCallback((x: number, y: number, type: TapFeedback['type']) => {
-    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    // Use UUID to prevent any collision "stuck" bugs
+    const id = uuid.v4() as string
 
-    startTransition(() => {
-      setFeedbacks(current => [...current, {id, x, y, type}])
-    })
+    // Add to list
+    setFeedbacks(current => [...current, {id, x, y, type}])
 
+    // Schedule removal
     timeoutIdsRef.current[id] = setTimeout(() => {
-      startTransition(() => {
-        setFeedbacks(current => current.filter(feedback => feedback.id !== id))
-      })
-
+      setFeedbacks(current => current.filter(feedback => feedback.id !== id))
       delete timeoutIdsRef.current[id]
     }, TAP_FEEDBACK_DURATION_MS)
   }, [])
