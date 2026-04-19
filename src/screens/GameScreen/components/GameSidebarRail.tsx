@@ -3,11 +3,11 @@ import {StyleSheet, Text, View} from 'react-native'
 import Svg, {Path} from 'react-native-svg'
 
 import {IconButton, TargetBadge} from '../../../components/common'
-import type {FruitDefinition} from '../../../constants/fruits'
+import type {ItemDefinition} from '../../../constants/items'
 import {theme} from '../../../theme'
 
 interface GameSidebarRailProps {
-  targetFruit: FruitDefinition | undefined
+  targetItem: ItemDefinition | undefined
   isMuted: boolean
   onHomePress: () => void
   onToggleMute: () => void
@@ -60,7 +60,7 @@ const MuteIcon = ({muted}: {muted: boolean}) => (
 )
 
 export function GameSidebarRail({
-  targetFruit,
+  targetItem,
   isMuted,
   onHomePress,
   onToggleMute,
@@ -74,9 +74,9 @@ export function GameSidebarRail({
         <Text style={styles.label}>Home</Text>
       </View>
 
-      {targetFruit ? (
+      {targetItem ? (
         <View style={styles.targetSection}>
-          <TargetBadge fruit={targetFruit} compact tone="dark" />
+          <TargetBadge item={targetItem} compact tone="dark" />
           <Text style={styles.label}>Target</Text>
         </View>
       ) : (
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: theme.typography.letterSpacing.capsTight,
   },
-  fruitName: {
+  itemName: {
     fontSize: theme.typography.size.xs,
     fontWeight: theme.typography.weight.black,
     color: theme.colors.white,

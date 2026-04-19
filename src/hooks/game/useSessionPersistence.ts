@@ -6,8 +6,8 @@ import {
   SESSION_FLUSH_INTERVAL_MS,
 } from '../../constants/gameConfig'
 import {
-  getRandomFruitId,
-} from '../../constants/fruits'
+  getRandomItemId,
+} from '../../constants/items'
 import type {
   DeviceInfo,
   GameStatus,
@@ -16,7 +16,7 @@ import type {
 } from '../../types/game.types'
 import {
   createSessionRecord,
-  flushSessionUpdates,
+  flushSessionupdates,
   saveSessionBundle,
 } from '../../services/session'
 import {useGameStore} from '../../store/gameStore'
@@ -25,7 +25,7 @@ interface UseSessionPersistenceOptions {
   autoStart?: boolean
   captureEventsCount: number
   deviceInfo?: DeviceInfo
-  fruitEventsCount: number
+  itemEventsCount: number
   onError?: (error: Error) => void
   onSessionCompleted?: (bundle: SessionBundle) => void | Promise<void>
   onSessionStarted?: (sessionId: string) => void | Promise<void>
@@ -40,7 +40,7 @@ export function useSessionPersistence({
   autoStart = false,
   captureEventsCount,
   deviceInfo,
-  fruitEventsCount,
+  itemEventsCount,
   onError,
   onSessionCompleted,
   onSessionStarted,
@@ -61,7 +61,7 @@ export function useSessionPersistence({
   const pendingFlushRef = useRef(false)
   const persistedCountsRef = useRef({
     taps: 0,
-    fruitEvents: 0,
+    itemEvents: 0,
     captures: 0,
   })
   const onSessionStartedRef = useRef(onSessionStarted)
@@ -99,8 +99,8 @@ export function useSessionPersistence({
     }
 
     const pendingTaps = currentState.taps.slice(persistedCountsRef.current.taps)
-    const pendingFruitEvents = currentState.fruitEvents.slice(
-      persistedCountsRef.current.fruitEvents,
+    const pendingItemEvents = currentState.itemEvents.slice(
+      persistedCountsRef.current.itemEvents,
     )
     const pendingCaptures = currentState.captureEvents.slice(
       persistedCountsRef.current.captures,
@@ -110,18 +110,18 @@ export function useSessionPersistence({
     setIsPersisting(true)
 
     try {
-      await flushSessionUpdates({
+      await flushSessionupdates({
         sessionId: currentState.sessionId,
         session: currentState.session,
         taps: pendingTaps,
-        fruitEvents: pendingFruitEvents,
+        itemEvents: pendingItemEvents,
         captures: pendingCaptures,
         mergeSession: true,
       })
 
       persistedCountsRef.current = {
         taps: currentState.taps.length,
-        fruitEvents: currentState.fruitEvents.length,
+        itemEvents: currentState.itemEvents.length,
         captures: currentState.captureEvents.length,
       }
       setLastError(null)
@@ -164,7 +164,7 @@ export function useSessionPersistence({
         await saveSessionBundle(bundle)
         persistedCountsRef.current = {
           taps: bundle.taps.length,
-          fruitEvents: bundle.fruitEvents.length,
+          itemEvents: bundle.itemEvents.length,
           captures: bundle.captures.length,
         }
         setLastError(null)
@@ -190,7 +190,7 @@ export function useSessionPersistence({
 
       persistedCountsRef.current = {
         taps: 0,
-        fruitEvents: 0,
+        itemEvents: 0,
         captures: 0,
       }
       pendingFlushRef.current = false
@@ -199,10 +199,10 @@ export function useSessionPersistence({
       setIsPersisting(false)
 
       try {
-        const resolvedTargetFruit = getRandomFruitId()
+        const resolvedTargetItem = getRandomItemId()
         const nextSessionId = startSession({
           userId,
-          targetFruit: resolvedTargetFruit,
+          targetItem: resolvedTargetItem,
           deviceInfo,
         })
 
@@ -234,7 +234,7 @@ export function useSessionPersistence({
     flushInFlightRef.current = false
     persistedCountsRef.current = {
       taps: 0,
-      fruitEvents: 0,
+      itemEvents: 0,
       captures: 0,
     }
 
@@ -265,8 +265,8 @@ export function useSessionPersistence({
     const pendingWriteCount =
       tapsCount -
       persistedCountsRef.current.taps +
-      fruitEventsCount -
-      persistedCountsRef.current.fruitEvents +
+      itemEventsCount -
+      persistedCountsRef.current.itemEvents +
       captureEventsCount -
       persistedCountsRef.current.captures
 
@@ -276,7 +276,7 @@ export function useSessionPersistence({
   }, [
     captureEventsCount,
     flushPendingSessionData,
-    fruitEventsCount,
+    itemEventsCount,
     session,
     status,
     tapsCount,

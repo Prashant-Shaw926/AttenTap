@@ -3,7 +3,7 @@ import type {FirebaseFirestoreTypes} from '@react-native-firebase/firestore'
 import {FIRESTORE_BATCH_WRITE_LIMIT} from '../constants/gameConfig'
 import type {
   CaptureEvent,
-  FruitEvent,
+  ItemEvent,
   SessionBundle,
   SessionDocument,
 } from '../types/game.types'
@@ -22,7 +22,7 @@ export interface SessionFlushPayload {
   sessionId: string
   session?: SessionDocument
   taps?: TapEvent[]
-  fruitEvents?: FruitEvent[]
+  itemEvents?: ItemEvent[]
   captures?: CaptureEvent[]
   mergeSession?: boolean
 }
@@ -42,20 +42,20 @@ const serializeTap = (tap: TapEvent): FirebaseFirestoreTypes.DocumentData => ({
   y: tap.y,
   type: tap.type,
   timestamp: tap.timestamp,
-  fruitId: tap.fruitId,
+  itemId: tap.itemId,
 })
 
-const serializeFruitEvent = (
-  fruitEvent: FruitEvent,
+const serializeItemEvent = (
+  itemEvent: ItemEvent,
 ): FirebaseFirestoreTypes.DocumentData => ({
-  fruitType: fruitEvent.fruitType,
-  isTarget: fruitEvent.isTarget,
-  slotId: fruitEvent.slotId,
-  x: fruitEvent.x,
-  y: fruitEvent.y,
-  appearedAt: fruitEvent.appearedAt,
-  disappearedAt: fruitEvent.disappearedAt,
-  wasCorrectlyTapped: fruitEvent.wasCorrectlyTapped,
+  itemType: itemEvent.itemType,
+  isTarget: itemEvent.isTarget,
+  slotId: itemEvent.slotId,
+  x: itemEvent.x,
+  y: itemEvent.y,
+  appearedAt: itemEvent.appearedAt,
+  disappearedAt: itemEvent.disappearedAt,
+  wasCorrectlyTapped: itemEvent.wasCorrectlyTapped,
 })
 
 const serializeCaptureEvent = (
@@ -64,8 +64,8 @@ const serializeCaptureEvent = (
   sessionId: captureEvent.sessionId,
   path: captureEvent.path,
   timestamp: captureEvent.timestamp,
-  visibleFruitIds: captureEvent.visibleFruitIds,
-  targetFruitIds: captureEvent.targetFruitIds,
+  visibleItemIds: captureEvent.visibleItemIds,
+  targetItemIds: captureEvent.targetItemIds,
 })
 
 const getSessionPath = (sessionId: string): string =>
@@ -74,8 +74,8 @@ const getSessionPath = (sessionId: string): string =>
 const getSessionTapsPath = (sessionId: string): string =>
   `${getSessionPath(sessionId)}/taps`
 
-const getSessionFruitEventsPath = (sessionId: string): string =>
-  `${getSessionPath(sessionId)}/fruitEvents`
+const getSessionItemEventsPath = (sessionId: string): string =>
+  `${getSessionPath(sessionId)}/itemEvents`
 
 const getSessionCapturesPath = (sessionId: string): string =>
   `${getSessionPath(sessionId)}/captures`
@@ -91,7 +91,7 @@ export const buildSessionWrites = ({
   sessionId,
   session,
   taps = [],
-  fruitEvents = [],
+  itemEvents = [],
   captures = [],
   mergeSession = true,
 }: SessionFlushPayload): FirestoreWrite[] => [
@@ -108,9 +108,9 @@ export const buildSessionWrites = ({
     path: `${getSessionTapsPath(sessionId)}/${tap.id}`,
     data: serializeTap(tap),
   })),
-  ...fruitEvents.map(fruitEvent => ({
-    path: `${getSessionFruitEventsPath(sessionId)}/${fruitEvent.id}`,
-    data: serializeFruitEvent(fruitEvent),
+  ...itemEvents.map(itemEvent => ({
+    path: `${getSessionItemEventsPath(sessionId)}/${itemEvent.id}`,
+    data: serializeItemEvent(itemEvent),
   })),
   ...captures.map(capture => ({
     path: `${getSessionCapturesPath(sessionId)}/${capture.id}`,
@@ -142,7 +142,7 @@ const commitWrites = async (writes: FirestoreWrite[]): Promise<void> => {
   }
 }
 
-export const flushSessionUpdates = async (
+export const flushSessionupdates = async (
   payload: SessionFlushPayload,
 ): Promise<void> => {
   await commitWrites(buildSessionWrites(payload))
@@ -151,11 +151,11 @@ export const flushSessionUpdates = async (
 export const saveSessionBundle = async (
   bundle: SessionBundle,
 ): Promise<void> => {
-  await flushSessionUpdates({
+  await flushSessionupdates({
     sessionId: bundle.sessionId,
     session: bundle.session,
     taps: bundle.taps,
-    fruitEvents: bundle.fruitEvents,
+    itemEvents: bundle.itemEvents,
     captures: bundle.captures,
     mergeSession: false,
   })

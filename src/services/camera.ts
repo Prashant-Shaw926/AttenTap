@@ -7,20 +7,20 @@ interface BuildCaptureRecordInputParams {
   sessionId: string
   path: string
   timestampMs: number
-  visibleFruitIds: string[]
-  targetFruitIds: string[]
+  visibleItemIds: string[]
+  targetItemIds: string[]
 }
 
 export const buildCaptureRecordInput = ({
   sessionId,
   path,
   timestampMs,
-  visibleFruitIds,
-  targetFruitIds,
+  visibleItemIds,
+  targetItemIds,
 }: BuildCaptureRecordInputParams): RecordCaptureInput => ({
   sessionId,
   path,
   timestamp: Timestamp.fromMillis(timestampMs),
-  visibleFruitIds: uniqueIds(visibleFruitIds),
-  targetFruitIds: uniqueIds(targetFruitIds),
+  visibleItemIds: uniqueIds(visibleItemIds),
+  targetItemIds: uniqueIds(targetItemIds),
 })

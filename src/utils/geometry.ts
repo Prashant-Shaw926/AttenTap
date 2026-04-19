@@ -1,4 +1,4 @@
-import type {FruitInstance} from '../types/game.types'
+import type {ItemInstance} from '../types/game.types'
 
 export interface Point {
   x: number
@@ -18,21 +18,21 @@ export const isPointInsideCircle = (
   radius: number,
 ): boolean => distanceBetweenPoints(point, center) <= radius
 
-export const isPointInsideFruit = (
+export const isPointInsideItem = (
   point: Point,
-  fruit: Pick<FruitInstance, 'x' | 'y'>,
-  fruitSize: number,
+  item: Pick<ItemInstance, 'x' | 'y'>,
+  itemSize: number,
   hitSlop = 0,
-): boolean => isPointInsideCircle(point, fruit, fruitSize / 2 + hitSlop)
+): boolean => isPointInsideCircle(point, item, itemSize / 2 + hitSlop)
 
-export const getNearestFruitAtPoint = (
+export const getNearestItemAtPoint = (
   point: Point,
-  fruits: FruitInstance[],
-  fruitSize: number,
+  items: ItemInstance[],
+  itemSize: number,
   hitSlop = 0,
-): FruitInstance | null => {
-  const hits = fruits
-    .filter(fruit => isPointInsideFruit(point, fruit, fruitSize, hitSlop))
+): ItemInstance | null => {
+  const hits = items
+    .filter(item => isPointInsideItem(point, item, itemSize, hitSlop))
     .sort(
       (first, second) =>
         distanceBetweenPoints(point, first) -

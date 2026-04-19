@@ -2,24 +2,24 @@ import React from 'react'
 import {StyleSheet, View} from 'react-native'
 
 import {Card, SectionHeader, TargetBadge} from '../../../components/common'
-import type {FruitDefinition} from '../../../constants/fruits'
+import type {ItemDefinition} from '../../../constants/items'
 import {theme} from '../../../theme'
 
 interface HomeTargetPanelProps {
-  fruit: FruitDefinition | undefined
+  item: ItemDefinition | undefined
 }
 
-export function HomeTargetPanel({fruit}: HomeTargetPanelProps) {
+export function HomeTargetPanel({item}: HomeTargetPanelProps) {
   return (
     <Card tone="mid" style={styles.card}>
       <SectionHeader
         eyebrow="Today"
-        title="Target Fruit"
-        subtitle="Tap only the highlighted fruit during the two minute round."
+        title="Target Item"
+        subtitle="Tap only the highlighted item during the two minute round."
       />
 
       <View style={styles.badgeWrap}>
-        <TargetBadge fruit={fruit} label="Today's Target" />
+        <TargetBadge item={item} label="Today's Target" />
       </View>
     </Card>
   )

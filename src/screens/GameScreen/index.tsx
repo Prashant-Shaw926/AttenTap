@@ -7,8 +7,8 @@ import {
 } from 'react-native'
 
 import {AppScreen} from '../../components/common'
-import {getFruitById, resolveFruitId} from '../../constants/fruits'
-import {FRUIT_SIZE} from '../../constants/gameConfig'
+import {getItemById, resolveItemId} from '../../constants/items'
+import {ITEM_SIZE} from '../../constants/gameConfig'
 import {useGame} from '../../hooks/useGame'
 import type {GameScreenProps} from '../../navigation/types'
 import type {SessionBundle} from '../../types/game.types'
@@ -31,13 +31,13 @@ export default function GameScreen({navigation, route}: GameScreenProps) {
   const {feedbacks, addFeedback} = useTapFeedbackQueue()
   const {playTapSound} = useTapSound(isMuted)
 
-  const fruitSize = useMemo(
+  const itemSize = useMemo(
     () =>
       clamp(
         Math.min(boardSize.width, boardSize.height) *
-          theme.layout.landscape.fruitScaleRatio || FRUIT_SIZE,
-        theme.layout.landscape.fruitMinSize,
-        theme.layout.landscape.fruitMaxSize,
+          theme.layout.landscape.itemScaleRatio || ITEM_SIZE,
+        theme.layout.landscape.itemMinSize,
+        theme.layout.landscape.itemMaxSize,
       ),
     [boardSize.height, boardSize.width],
   )
@@ -49,13 +49,13 @@ export default function GameScreen({navigation, route}: GameScreenProps) {
 
   const {
     status,
-    visibleFruits,
+    visibleItems,
     remainingTimeMs,
     correctTaps,
     incorrectTaps,
     accuracy,
     lastError,
-    targetFruitDefinition,
+    targetItemDefinition,
     handleTap,
     startGame,
     resetGame,
@@ -64,18 +64,18 @@ export default function GameScreen({navigation, route}: GameScreenProps) {
     userId: 'demo-user',
     boardWidth: boardSize.width,
     boardHeight: boardSize.height,
-    fruitSize,
+    itemSize,
     onSessionCompleted: handleSessionCompleted,
   })
 
-  const sidebarTargetFruit = targetFruitDefinition
+  const sidebarTargetItem = targetItemDefinition
   const idleOverlayTitle = "Start when you're ready"
   const idleOverlayDescription =
-    'Your target fruit will be chosen when the round starts.'
+    'Your target item will be chosen when the round starts.'
 
-  const hasVisibleTargetFruit = useMemo(
-    () => visibleFruits.some(fruit => fruit.isTarget),
-    [visibleFruits],
+  const hasVisibleTargetItem = useMemo(
+    () => visibleItems.some(item => item.isTarget),
+    [visibleItems],
   )
 
   const handleBoardLayout = useCallback((event: LayoutChangeEvent) => {
@@ -105,13 +105,13 @@ export default function GameScreen({navigation, route}: GameScreenProps) {
     <AppScreen>
       <GameCameraCapture
         enabled={status === 'playing'}
-        isCapturing={hasVisibleTargetFruit}
+        isCapturing={hasVisibleTargetItem}
         onCapture={handleCapture}
       />
 
       <View style={styles.layout}>
         <GameSidebarRail
-          targetFruit={sidebarTargetFruit}
+          targetItem={sidebarTargetItem}
           isMuted={isMuted}
           onHomePress={() => {
             resetGame()
@@ -122,15 +122,15 @@ export default function GameScreen({navigation, route}: GameScreenProps) {
 
         <View style={styles.boardWrap}>
           <GameBoard
-            fruits={visibleFruits}
-            fruitSize={fruitSize}
+            items={visibleItems}
+            itemSize={itemSize}
             feedbacks={feedbacks}
             onLayout={handleBoardLayout}
             onBoardTap={handleBoardTap}
           >
             {status === 'idle' ? (
               <GameIdleOverlay
-                targetLabel={targetFruitDefinition?.label?.toLowerCase()}
+                targetLabel={targetItemDefinition?.label?.toLowerCase()}
                 title={idleOverlayTitle}
                 description={idleOverlayDescription}
                 onStart={() => {

@@ -6,37 +6,37 @@ import type {
   CaptureEvent,
   DeviceInfo,
   EndSessionInput,
-  FruitEvent,
-  FruitInstance,
+  ItemEvent,
+  ItemInstance,
   GameStatus,
   RecordCaptureInput,
-  RecordFruitAppearanceInput,
-  RecordFruitDisappearanceInput,
+  RecordItemAppearanceInput,
+  RecordItemDisappearanceInput,
   SessionBundle,
   SessionDocument,
   StartSessionInput,
 } from '../types/game.types'
 import type {RecordTapInput, TapEvent, TapType} from '../types/tap.types'
 
-type ActiveFruitMap = Record<string, FruitInstance>
+type ActiveItemMap = Record<string, ItemInstance>
 
 export interface GameStoreState {
   status: GameStatus
   sessionId: string | null
   session: SessionDocument | null
   taps: TapEvent[]
-  fruitEvents: FruitEvent[]
+  itemEvents: ItemEvent[]
   captureEvents: CaptureEvent[]
-  activeFruits: ActiveFruitMap
+  activeItems: ActiveItemMap
   startSession: (input: StartSessionInput) => string
   endSession: (input?: EndSessionInput) => SessionBundle | null
   recordTap: (input: RecordTapInput) => TapEvent | null
-  recordFruitAppearance: (
-    input: RecordFruitAppearanceInput,
-  ) => FruitEvent | null
-  recordFruitDisappearance: (
-    input: RecordFruitDisappearanceInput,
-  ) => FruitEvent | null
+  recordItemAppearance: (
+    input: RecordItemAppearanceInput,
+  ) => ItemEvent | null
+  recordItemDisappearance: (
+    input: RecordItemDisappearanceInput,
+  ) => ItemEvent | null
   recordCapture: (input: RecordCaptureInput) => CaptureEvent | null
   resetGame: () => void
 }
@@ -47,9 +47,9 @@ type GameStoreSlice = Pick<
   | 'sessionId'
   | 'session'
   | 'taps'
-  | 'fruitEvents'
+  | 'itemEvents'
   | 'captureEvents'
-  | 'activeFruits'
+  | 'activeItems'
 >
 
 const createId = (prefix: string): string =>
@@ -67,9 +67,9 @@ const getInitialState = (): GameStoreSlice => ({
   sessionId: null,
   session: null,
   taps: [],
-  fruitEvents: [],
+  itemEvents: [],
   captureEvents: [],
-  activeFruits: {},
+  activeItems: {},
 })
 
 const calculateAccuracy = (correctTaps: number, totalTaps: number): number => {
@@ -97,11 +97,11 @@ const updateSessionStats = (
   }
 }
 
-const finalizeFruitEvents = (
-  fruitEvents: FruitEvent[],
+const finalizeItemEvents = (
+  itemEvents: ItemEvent[],
   endedAt: SessionDocument['startedAt'],
-): FruitEvent[] =>
-  fruitEvents.map(event => {
+): ItemEvent[] =>
+  itemEvents.map(event => {
     if (event.disappearedAt) {
       return event
     }
@@ -112,30 +112,30 @@ const finalizeFruitEvents = (
     }
   })
 
-const updateFruitEventList = (
-  fruitEvents: FruitEvent[],
-  fruitId: string,
-  updater: (fruitEvent: FruitEvent) => FruitEvent,
-): FruitEvent[] =>
-  fruitEvents.map(fruitEvent => {
-    if (fruitEvent.id !== fruitId) {
-      return fruitEvent
+const updateItemEventList = (
+  itemEvents: ItemEvent[],
+  itemId: string,
+  updater: (itemEvent: ItemEvent) => ItemEvent,
+): ItemEvent[] =>
+  itemEvents.map(itemEvent => {
+    if (itemEvent.id !== itemId) {
+      return itemEvent
     }
 
-    return updater(fruitEvent)
+    return updater(itemEvent)
   })
 
 const buildSessionBundle = (
   sessionId: string,
   session: SessionDocument,
   taps: TapEvent[],
-  fruitEvents: FruitEvent[],
+  itemEvents: ItemEvent[],
   captures: CaptureEvent[],
 ): SessionBundle => ({
   sessionId,
   session,
   taps,
-  fruitEvents,
+  itemEvents,
   captures,
 })
 
@@ -153,7 +153,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         userId: input.userId,
         startedAt,
         endedAt: null,
-        targetFruit: input.targetFruit,
+        targetItem: input.targetItem,
         totalTaps: 0,
         correctTaps: 0,
         incorrectTaps: 0,
@@ -161,9 +161,9 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         deviceInfo: input.deviceInfo ?? getDefaultDeviceInfo(),
       },
       taps: [],
-      fruitEvents: [],
+      itemEvents: [],
       captureEvents: [],
-      activeFruits: {},
+      activeItems: {},
     })
 
     return sessionId
@@ -181,20 +181,20 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       ...state.session,
       endedAt,
     }
-    const finalizedFruitEvents = finalizeFruitEvents(state.fruitEvents, endedAt)
+    const finalizedItemEvents = finalizeItemEvents(state.itemEvents, endedAt)
     const sessionBundle = buildSessionBundle(
       state.sessionId,
       finalizedSession,
       state.taps,
-      finalizedFruitEvents,
+      finalizedItemEvents,
       state.captureEvents,
     )
 
     set({
       status: 'completed',
       session: finalizedSession,
-      fruitEvents: finalizedFruitEvents,
-      activeFruits: {},
+      itemEvents: finalizedItemEvents,
+      activeItems: {},
     })
 
     return sessionBundle
@@ -212,7 +212,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       y: input.y,
       type: input.type,
       timestamp: input.timestamp ?? createTimestamp(),
-      fruitId: input.fruitId ?? null,
+      itemId: input.itemId ?? null,
     }
 
     set(currentState => {
@@ -229,18 +229,18 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     return tap
   },
 
-  recordFruitAppearance: input => {
+  recordItemAppearance: input => {
     const state = get()
 
     if (!state.session) {
       return null
     }
 
-    const fruitId = input.fruitId ?? createId('fruit')
+    const itemId = input.itemId ?? createId('item')
     const appearedAt = input.appearedAt ?? createTimestamp()
-    const fruitEvent: FruitEvent = {
-      id: fruitId,
-      fruitType: input.fruitType,
+    const itemEvent: ItemEvent = {
+      id: itemId,
+      itemType: input.itemType,
       isTarget: input.isTarget,
       slotId: input.slotId,
       x: input.x,
@@ -251,47 +251,47 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     }
 
     set(currentState => ({
-      fruitEvents: [...currentState.fruitEvents, fruitEvent],
-      activeFruits: {
-        ...currentState.activeFruits,
-        [fruitId]: fruitEvent,
+      itemEvents: [...currentState.itemEvents, itemEvent],
+      activeItems: {
+        ...currentState.activeItems,
+        [itemId]: itemEvent,
       },
     }))
 
-    return fruitEvent
+    return itemEvent
   },
 
-  recordFruitDisappearance: input => {
+  recordItemDisappearance: input => {
     const state = get()
-    const existingFruit = state.activeFruits[input.fruitId]
+    const existingItem = state.activeItems[input.itemId]
 
-    if (!state.session || !existingFruit) {
+    if (!state.session || !existingItem) {
       return null
     }
 
     const disappearedAt = input.disappearedAt ?? createTimestamp()
-    const fruitEvent: FruitEvent = {
-      ...existingFruit,
+    const itemEvent: ItemEvent = {
+      ...existingItem,
       disappearedAt,
       wasCorrectlyTapped:
-        input.wasCorrectlyTapped ?? existingFruit.wasCorrectlyTapped,
+        input.wasCorrectlyTapped ?? existingItem.wasCorrectlyTapped,
     }
 
     set(currentState => {
-      const nextActiveFruits = {...currentState.activeFruits}
-      delete nextActiveFruits[input.fruitId]
+      const nextActiveItems = {...currentState.activeItems}
+      delete nextActiveItems[input.itemId]
 
       return {
-        fruitEvents: updateFruitEventList(
-          currentState.fruitEvents,
-          input.fruitId,
-          () => fruitEvent,
+        itemEvents: updateItemEventList(
+          currentState.itemEvents,
+          input.itemId,
+          () => itemEvent,
         ),
-        activeFruits: nextActiveFruits,
+        activeItems: nextActiveItems,
       }
     })
 
-    return fruitEvent
+    return itemEvent
   },
 
   recordCapture: input => {
@@ -306,8 +306,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       sessionId: input.sessionId,
       path: input.path,
       timestamp: input.timestamp ?? createTimestamp(),
-      visibleFruitIds: input.visibleFruitIds,
-      targetFruitIds: input.targetFruitIds,
+      visibleItemIds: input.visibleItemIds,
+      targetItemIds: input.targetItemIds,
     }
 
     set(currentState => ({
@@ -323,7 +323,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
 export const selectGameStatus = (state: GameStoreState) => state.status
 export const selectGameSession = (state: GameStoreState) => state.session
-export const selectActiveFruits = (state: GameStoreState) => state.activeFruits
+export const selectActiveItems = (state: GameStoreState) => state.activeItems
 export const selectTapEvents = (state: GameStoreState) => state.taps
-export const selectFruitEvents = (state: GameStoreState) => state.fruitEvents
+export const selectItemEvents = (state: GameStoreState) => state.itemEvents
 export const selectCaptureEvents = (state: GameStoreState) => state.captureEvents

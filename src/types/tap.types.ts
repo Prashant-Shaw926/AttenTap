@@ -8,7 +8,7 @@ export interface TapEvent {
   y: number
   type: TapType
   timestamp: FirebaseFirestoreTypes.Timestamp
-  fruitId: string | null
+  itemId: string | null
 }
 
 export interface RecordTapInput {
@@ -17,5 +17,5 @@ export interface RecordTapInput {
   y: number
   type: TapType
   timestamp?: FirebaseFirestoreTypes.Timestamp
-  fruitId?: string | null
+  itemId?: string | null
 }

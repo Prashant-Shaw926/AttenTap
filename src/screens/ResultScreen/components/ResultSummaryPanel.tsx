@@ -35,37 +35,37 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     justifyContent: 'center',
-    gap: theme.spacing.sm,
+    gap: theme.spacing.xxs,
   },
   gradeRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   gradeLetter: {
-    fontSize: theme.typography.size.giant,
-    lineHeight: theme.typography.size.giant,
+    fontSize: theme.typography.size.xxl,
+    lineHeight: theme.typography.size.xxl,
     fontWeight: theme.typography.weight.black,
   },
   accuracyBlock: {
     justifyContent: 'center',
-    gap: theme.spacing.tiny,
+    gap: 0,
   },
   accuracyValue: {
-    fontSize: theme.typography.size.xxl,
+    fontSize: theme.typography.size.lg,
     fontWeight: theme.typography.weight.black,
     color: theme.colors.textPrimary,
   },
   accuracyLabel: {
-    fontSize: theme.typography.size.base,
+    fontSize: theme.typography.size.xs,
     color: theme.colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: theme.typography.letterSpacing.microLabel,
   },
   message: {
     maxWidth: theme.layout.landscape.resultMessageWidth,
-    fontSize: theme.typography.size.base,
-    lineHeight: theme.typography.size.base * theme.typography.lineHeight.relaxed,
+    fontSize: theme.typography.size.sm,
+    lineHeight: theme.typography.size.sm * theme.typography.lineHeight.relaxed,
     color: theme.colors.textSecondary,
   },
 })

@@ -1,18 +1,17 @@
 import React, {memo} from 'react'
-import {Pressable, StyleSheet, View} from 'react-native'
+import {StyleSheet, View} from 'react-native'
 import Animated, {ZoomIn, ZoomOut} from 'react-native-reanimated'
 
-import {getFruitById} from '../../../constants/fruits'
-import type {FruitInstance} from '../../../types/game.types'
-import {theme} from '../../../theme'
+import {getItemById} from '../../../constants/items'
+import type {ItemInstance} from '../../../types/game.types'
 
-interface FruitSpriteProps {
-  fruit: FruitInstance
+interface ItemSpriteProps {
+  item: ItemInstance
   size: number
 }
 
-function FruitSpriteComponent({fruit, size}: FruitSpriteProps) {
-  const definition = getFruitById(fruit.fruitType)
+function ItemSpriteComponent({item, size}: ItemSpriteProps) {
+  const definition = getItemById(item.itemType)
 
   if (!definition) {
     return null
@@ -30,8 +29,8 @@ function FruitSpriteComponent({fruit, size}: FruitSpriteProps) {
         {
           width: size,
           height: size,
-          left: fruit.x - size / 2,
-          top: fruit.y - size / 2,
+          left: item.x - size / 2,
+          top: item.y - size / 2,
         },
       ]}
     >
@@ -47,9 +46,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     zIndex: 6,
   },
-  pressable: {
-    flex: 1,
-  },
   surface: {
     flex: 1,
     alignItems: 'center',
@@ -57,4 +53,4 @@ const styles = StyleSheet.create({
   },
 })
 
-export const FruitSprite = memo(FruitSpriteComponent)
+export const ItemSprite = memo(ItemSpriteComponent)
