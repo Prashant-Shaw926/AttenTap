@@ -20,7 +20,7 @@ export function GameIdleOverlay({
   return (
     <View style={styles.root}>
       <Text style={styles.eyebrow}>Ready</Text>
-      <Text style={styles.title}>
+      <Text adjustsFontSizeToFit numberOfLines={2} style={styles.title}>
         {title ?? `Tap only\nthe ${targetLabel ?? 'target'}`}
       </Text>
       <Text style={styles.description}>
@@ -45,6 +45,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.xl,
     backgroundColor: theme.colors.boardBackground,
     zIndex: 10,
+    gap: theme.spacing.sm,
   },
   eyebrow: {
     fontSize: theme.typography.size.xs,
@@ -53,7 +54,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: theme.colors.textOnLightMuted,
     textAlign: 'center',
-    marginBottom: theme.spacing.xs,
   },
   title: {
     fontSize: theme.typography.size.xxl,
@@ -63,7 +63,6 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.weight.black,
     color: theme.colors.textOnLight,
     textAlign: 'center',
-    marginBottom: theme.spacing.sm,
   },
   description: {
     fontSize: theme.typography.size.base,
@@ -71,6 +70,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   action: {
-    marginTop: theme.spacing.lg,
+    marginTop: theme.spacing.sm,
   },
 })

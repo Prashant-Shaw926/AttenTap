@@ -9,12 +9,14 @@ import {CAMERA_CAPTURE_INTERVAL_MS} from '../constants/gameConfig'
 
 interface UseCameraCaptureOptions {
   enabled: boolean
+  isCapturing: boolean
   captureIntervalMs?: number
   onCapture: (path: string, timestampMs: number) => void
 }
 
 export const useCameraCapture = ({
   enabled,
+  isCapturing,
   captureIntervalMs = CAMERA_CAPTURE_INTERVAL_MS,
   onCapture,
 }: UseCameraCaptureOptions) => {
@@ -26,14 +28,28 @@ export const useCameraCapture = ({
   })
   const outputs = useMemo(() => [photoOutput], [photoOutput])
   const [isReady, setIsReady] = useState(false)
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const captureInFlightRef = useRef(false)
+  const prevIsCapturingRef = useRef(false)
   const onCaptureRef = useRef(onCapture)
+  const isCapturingRef = useRef(isCapturing)
+  const enabledRef = useRef(enabled)
 
+  // Keep refs in sync for the async capturePhoto callback
   useEffect(() => {
     onCaptureRef.current = onCapture
   }, [onCapture])
 
+  useEffect(() => {
+    isCapturingRef.current = isCapturing
+  }, [isCapturing])
+
+  useEffect(() => {
+    enabledRef.current = enabled
+  }, [enabled])
+
+  // Handle permission request
   useEffect(() => {
     if (!hasPermission) {
       requestPermission().catch(() => {})
@@ -41,13 +57,24 @@ export const useCameraCapture = ({
   }, [hasPermission, requestPermission])
 
   const capturePhoto = useCallback(async () => {
-    if (!enabled || !hasPermission || !device || !isReady || captureInFlightRef.current) {
+    // Guards: Stop if not enabled, not capturing (no target), no permission, hardware not ready, or already capturing
+    if (
+      !enabledRef.current ||
+      !isCapturingRef.current ||
+      !hasPermission ||
+      !device ||
+      !isReady ||
+      captureInFlightRef.current
+    ) {
       return
     }
 
     captureInFlightRef.current = true
 
     try {
+      // Re-verify enabled state inside try block to handle rapid shutdown
+      if (!enabledRef.current) return
+
       const photo = await photoOutput.capturePhotoToFile(
         {
           enableShutterSound: false,
@@ -56,26 +83,44 @@ export const useCameraCapture = ({
         {},
       )
       onCaptureRef.current(photo.filePath, Date.now())
-    } catch {
-      // Ignore capture failures to keep gameplay uninterrupted.
+    } catch (error) {
+      // Ignore capture failures to keep gameplay uninterrupted
     } finally {
       captureInFlightRef.current = false
     }
-  }, [device, enabled, hasPermission, isReady, photoOutput])
+  }, [device, hasPermission, isReady, photoOutput])
 
+  // EFFECT 1: Immediate Capture on Visibility Transition (Target Appears)
   useEffect(() => {
     if (!enabled || !hasPermission || !device || !isReady) {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
+      prevIsCapturingRef.current = isCapturing
       return
     }
 
-    capturePhoto().catch(() => {})
-    intervalRef.current = setInterval(() => {
+    const targetAppeared = isCapturing && !prevIsCapturingRef.current
+
+    if (targetAppeared) {
+      // Fire immediately. capturePhoto handles its own guards (inFlight etc)
       capturePhoto().catch(() => {})
-    }, captureIntervalMs)
+    }
+
+    prevIsCapturingRef.current = isCapturing
+  }, [isCapturing, enabled, hasPermission, device, isReady, capturePhoto])
+
+  // EFFECT 2: Stable Interval Loop (Sampling while Target is Visible)
+  useEffect(() => {
+    // Clear any existing interval before evaluation
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+
+    // Only start interval if gameplay is active AND target is visible
+    if (enabled && isCapturing && hasPermission && device && isReady) {
+      intervalRef.current = setInterval(() => {
+        capturePhoto().catch(() => {})
+      }, captureIntervalMs)
+    }
 
     return () => {
       if (intervalRef.current) {
@@ -88,6 +133,7 @@ export const useCameraCapture = ({
     capturePhoto,
     device,
     enabled,
+    isCapturing,
     hasPermission,
     isReady,
   ])

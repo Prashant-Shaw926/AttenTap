@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
   },
   hero: {
     maxWidth: theme.layout.landscape.heroMaxWidth,
-    gap: theme.spacing.md,
+    gap: theme.spacing.lg,
     alignItems: 'center',
     textAlign: 'center',
   },
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   subtitle: {
-    maxWidth: 420,
+    maxWidth: theme.layout.screen.subtitleMaxWidth,
     fontSize: theme.typography.size.md,
     lineHeight: Math.round(
       theme.typography.size.md * theme.typography.lineHeight.relaxed,
@@ -72,7 +72,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   playButton: {
-    marginTop: theme.spacing.lg,
     minWidth: 200,
   },
 })

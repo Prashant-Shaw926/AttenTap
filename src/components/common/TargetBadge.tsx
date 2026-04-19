@@ -35,12 +35,18 @@ export function TargetBadge({
         isLight ? styles.light : styles.dark,
       ]}
     >
-      <Text style={[styles.label, isLight ? styles.labelLight : null]}>{label}</Text>
+      {!compact ? (
+        <Text style={[styles.label, isLight ? styles.labelLight : null]}>{label}</Text>
+      ) : null}
       <View style={[styles.row, compact ? styles.rowCompact : null]}>
         <Icon width={iconSize} height={iconSize} />
-        {!compact ? (
+        {compact ? (
+          <Text style={[styles.compactName, isLight ? styles.compactNameLight : null]}>
+            {fruit.label}
+          </Text>
+        ) : (
           <Text style={[styles.name, isLight ? styles.nameLight : null]}>{fruit.label}</Text>
-        ) : null}
+        )}
       </View>
     </View>
   )
@@ -50,6 +56,7 @@ const styles = StyleSheet.create({
   base: {
     borderRadius: theme.radius.lg,
     borderWidth: 1,
+    gap: theme.spacing.xxs,
   },
   regular: {
     minWidth: 152,
@@ -62,8 +69,8 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 0,
-    paddingVertical: 0,
+    paddingHorizontal: theme.spacing.xxs,
+    paddingVertical: theme.spacing.xxs,
   },
   light: {
     backgroundColor: theme.colors.surfaceLight,
@@ -83,13 +90,14 @@ const styles = StyleSheet.create({
     color: theme.colors.textOnLightMuted,
   },
   row: {
-    marginTop: theme.spacing.xxs,
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
   },
   rowCompact: {
+    flexDirection: 'column',
     justifyContent: 'center',
+    gap: theme.spacing.tiny,
   },
   name: {
     fontSize: theme.typography.size.lg,
@@ -97,6 +105,16 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   nameLight: {
+    color: theme.colors.textOnLight,
+  },
+  compactName: {
+    fontSize: theme.typography.size.xxs,
+    fontWeight: theme.typography.weight.black,
+    color: theme.colors.white,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+  },
+  compactNameLight: {
     color: theme.colors.textOnLight,
   },
 })

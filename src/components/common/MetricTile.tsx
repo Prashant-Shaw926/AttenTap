@@ -52,18 +52,16 @@ export function MetricTile({
   );
 }
 
-const TILE_SIZE = 72
 
 const styles = StyleSheet.create({
   base: {
-    width: TILE_SIZE,
-    height: TILE_SIZE,
-    borderRadius: TILE_SIZE / 2,  // perfect circle
+    width: theme.layout.landscape.metricTileSize,
+    height: theme.layout.landscape.metricTileSize,
+    borderRadius: theme.layout.landscape.metricTileSize / 2,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
-    paddingVertical: 0,
-    paddingHorizontal: 0,
+    gap: theme.spacing.tiny,
   },
   dark: {
     backgroundColor: theme.colors.surfaceMid,
@@ -74,7 +72,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.borderOnLight,
   },
   label: {
-    fontSize: 9,                                          // tighter than xs (10) for circle
+    fontSize: theme.typography.size.xxs,
     fontWeight: theme.typography.weight.bold,
     letterSpacing: theme.typography.letterSpacing.capsTight,
     color: theme.colors.textSecondary,
@@ -84,9 +82,8 @@ const styles = StyleSheet.create({
     color: theme.colors.textOnLightMuted,
   },
   value: {
-    marginTop: 2,
-    fontSize: theme.typography.size.sm,                   // 12px
-    lineHeight: 14,
+    fontSize: theme.typography.size.sm,
+    lineHeight: theme.typography.size.sm * theme.typography.lineHeight.tight,
     fontWeight: theme.typography.weight.black,
     color: theme.colors.textPrimary,
     textAlign: 'center',

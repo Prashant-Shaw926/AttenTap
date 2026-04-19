@@ -220,37 +220,9 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         return currentState
       }
 
-      const fruitEvents =
-        tap.type === 'correct' && tap.fruitId
-          ? updateFruitEventList(
-              currentState.fruitEvents,
-              tap.fruitId,
-              fruitEvent => ({
-                ...fruitEvent,
-                wasCorrectlyTapped: true,
-              }),
-            )
-          : currentState.fruitEvents
-
-      const activeFruit = tap.fruitId
-        ? currentState.activeFruits[tap.fruitId]
-        : undefined
-      const activeFruits =
-        tap.type === 'correct' && tap.fruitId && activeFruit
-          ? {
-              ...currentState.activeFruits,
-              [tap.fruitId]: {
-                ...activeFruit,
-                wasCorrectlyTapped: true,
-              },
-            }
-          : currentState.activeFruits
-
       return {
         taps: [...currentState.taps, tap],
         session: updateSessionStats(currentState.session, tap.type),
-        fruitEvents,
-        activeFruits,
       }
     })
 

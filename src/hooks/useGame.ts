@@ -159,14 +159,43 @@ export const useGame = ({
         return null
       }
 
+      const activeFruitList = Object.values(currentState.activeFruits)
       const hitFruit = getNearestFruitAtPoint(
         {x, y},
-        Object.values(currentState.activeFruits),
+        activeFruitList,
         fruitSize,
         FRUIT_HIT_SLOP,
       )
 
       if (!hitFruit) {
+        // Ghost hit detection: Check if we hit a fruit that just disappeared (fading out)
+        const nowMs = Date.now()
+        const recentDisappeared = currentState.fruitEvents.filter(
+          f => f.disappearedAt && nowMs - f.disappearedAt.toMillis() < 250,
+        )
+
+        const ghostHit = getNearestFruitAtPoint(
+          {x, y},
+          recentDisappeared,
+          fruitSize,
+          FRUIT_HIT_SLOP,
+        )
+
+        if (ghostHit) {
+          // If it was a target that expired (wasn't tapped yet), count it as a late hit
+          if (ghostHit.isTarget && !ghostHit.wasCorrectlyTapped) {
+            return recordTap({
+              x,
+              y,
+              type: 'correct',
+              fruitId: ghostHit.id,
+            })
+          }
+
+          // Otherwise, it was already tapped or it's a non-target; ignore to avoid false misses
+          return null
+        }
+
         return recordTap({
           x,
           y,
@@ -174,6 +203,7 @@ export const useGame = ({
         })
       }
 
+      // If we hit a fruit, we record the tap and immediately mark the fruit as disappeared
       const tapType = hitFruit.isTarget ? 'correct' : 'incorrect'
       const tap = recordTap({
         x,
@@ -182,12 +212,10 @@ export const useGame = ({
         fruitId: hitFruit.id,
       })
 
-      if (hitFruit) {
-        recordFruitDisappearance({
-          fruitId: hitFruit.id,
-          wasCorrectlyTapped: hitFruit.isTarget,
-        })
-      }
+      recordFruitDisappearance({
+        fruitId: hitFruit.id,
+        wasCorrectlyTapped: hitFruit.isTarget,
+      })
 
       return tap
     },
@@ -196,31 +224,32 @@ export const useGame = ({
 
   const handleCapture = useCallback(
     (path: string, timestampMs: number) => {
-      const currentState = useGameStore.getState()
+      const {status, sessionId, session, activeFruits} = useGameStore.getState()
 
-      if (
-        currentState.status !== 'playing' ||
-        !currentState.sessionId ||
-        !currentState.session
-      ) {
+      if (status !== 'playing' || !sessionId || !session) {
         return
       }
 
-      const activeFruitList = Object.values(currentState.activeFruits)
+      const activeFruitList = Object.values(activeFruits)
+      if (activeFruitList.length === 0) {
+        return
+      }
+
       const targetFruitIds = activeFruitList
         .filter(fruit => fruit.isTarget)
         .map(fruit => fruit.id)
 
+      // Only record if there are targets visible to keep metrics relevant
       if (targetFruitIds.length === 0) {
         return
       }
 
       recordCapture(
         buildCaptureRecordInput({
-          sessionId: currentState.sessionId,
+          sessionId,
           path,
           timestampMs,
-          visibleFruitIds: activeFruitList.map(fruit => fruit.id),
+          visibleFruitIds: activeFruitList.map(f => f.id),
           targetFruitIds,
         }),
       )

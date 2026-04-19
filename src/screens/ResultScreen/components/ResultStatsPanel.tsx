@@ -63,7 +63,6 @@ const styles = StyleSheet.create({
   },
   card: {
     gap: theme.spacing.xs,
-    paddingVertical: theme.spacing.sm,
     ...theme.shadows.card,
   },
   rows: {

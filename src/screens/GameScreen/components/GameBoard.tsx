@@ -19,7 +19,6 @@ interface GameBoardProps {
   feedbacks: TapFeedback[]
   onLayout: (event: LayoutChangeEvent) => void
   onBoardTap: (event: GestureResponderEvent) => void
-  onFruitTap: (fruitId: string, x: number, y: number) => void
   children?: React.ReactNode
 }
 
@@ -29,14 +28,13 @@ function GameBoardComponent({
   feedbacks,
   onLayout,
   onBoardTap,
-  onFruitTap,
   children,
 }: GameBoardProps) {
   return (
     <View style={styles.frame}>
       <Pressable style={styles.board} onLayout={onLayout} onPress={onBoardTap}>
         {fruits.map(fruit => (
-          <FruitSprite key={fruit.id} fruit={fruit} size={fruitSize} onTap={onFruitTap} />
+          <FruitSprite key={fruit.id} fruit={fruit} size={fruitSize} />
         ))}
 
         <TapFeedbackLayer feedbacks={feedbacks} />

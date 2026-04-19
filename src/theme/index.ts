@@ -38,6 +38,7 @@ export const theme = {
     xl: 28,
     xxl: 40,
     section: 56,
+    tiny: 2,
   },
   radius: {
     sm: 10,
@@ -54,6 +55,7 @@ export const theme = {
       black: '800' as const,
     },
     size: {
+      xxs: 10,
       xs: 10,
       sm: 12,
       base: 15,
@@ -110,6 +112,7 @@ export const theme = {
       horizontalPadding: 28,
       verticalPadding: 16,
       gap: 16,
+      subtitleMaxWidth: 420,
     },
     landscape: {
       outerPadding: 8,
@@ -131,6 +134,7 @@ export const theme = {
       fruitMinSize: 76,
       fruitMaxSize: 144,
       fruitScaleRatio: 0.15,
+      metricTileSize: 72,
     },
   },
 } as const

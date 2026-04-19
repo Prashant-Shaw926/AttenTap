@@ -8,11 +8,13 @@ import {useCameraCapture} from '../../../hooks/useCamera'
 
 interface GameCameraCaptureProps {
   enabled: boolean
+  isCapturing: boolean
   onCapture: (path: string, timestampMs: number) => void
 }
 
 export function GameCameraCapture({
   enabled,
+  isCapturing,
   onCapture,
 }: GameCameraCaptureProps) {
   const {
@@ -25,6 +27,7 @@ export function GameCameraCapture({
     handleError,
   } = useCameraCapture({
     enabled,
+    isCapturing,
     captureIntervalMs: CAMERA_CAPTURE_INTERVAL_MS,
     onCapture,
   })

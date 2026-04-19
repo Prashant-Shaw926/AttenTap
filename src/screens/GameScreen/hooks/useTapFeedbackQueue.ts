@@ -18,13 +18,9 @@ export const useTapFeedbackQueue = () => {
   }, [])
 
   const addFeedback = useCallback((x: number, y: number, type: TapFeedback['type']) => {
-    // Use UUID to prevent any collision "stuck" bugs
     const id = uuid.v4() as string
-
-    // Add to list
     setFeedbacks(current => [...current, {id, x, y, type}])
 
-    // Schedule removal
     timeoutIdsRef.current[id] = setTimeout(() => {
       setFeedbacks(current => current.filter(feedback => feedback.id !== id))
       delete timeoutIdsRef.current[id]
