@@ -2,13 +2,14 @@ import React, {useMemo} from 'react'
 import {StyleSheet, View} from 'react-native'
 
 import {AppScreen} from '../../components/common'
+import {resolveFruitId} from '../../constants/fruits'
 import type {ResultScreenProps} from '../../navigation/types'
+import {useGameStore} from '../../store/gameStore'
 import {theme} from '../../theme'
 import {formatDurationSeconds, formatPercent} from '../../utils/game/formatters'
 import {ResultStatsPanel} from './components/ResultStatsPanel'
 import {ResultSummaryPanel} from './components/ResultSummaryPanel'
 import {getGrade} from './utils'
-import {useGameStore} from '../../store/gameStore'
 
 export default function ResultScreen({navigation, route}: ResultScreenProps) {
   const resetGame = useGameStore(state => state.resetGame)
@@ -46,7 +47,7 @@ export default function ResultScreen({navigation, route}: ResultScreenProps) {
           stats={stats}
           onPlayAgain={() => {
             resetGame()
-            navigation.replace('Game', {targetFruitId: session.targetFruit})
+            navigation.replace('Game')
           }}
           onHome={() => {
             resetGame()

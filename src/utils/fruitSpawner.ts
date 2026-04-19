@@ -57,8 +57,11 @@ const isTooCloseToFruit = (
 export const chooseFruitType = (
   targetFruitId: string,
   targetChance = TARGET_FRUIT_SPAWN_CHANCE,
+  avoidFruitId?: string | null,
 ): {fruitType: string; isTarget: boolean} => {
-  const isTarget = Math.random() <= targetChance
+  // If target fruit is forbidden, we must spawn a non-target
+  const canSpawnTarget = avoidFruitId !== targetFruitId
+  const isTarget = canSpawnTarget && Math.random() <= targetChance
 
   if (isTarget) {
     return {
@@ -67,8 +70,14 @@ export const chooseFruitType = (
     }
   }
 
+  // Exclude both target and the forbidden fruit if applicable
+  const excluded = [targetFruitId]
+  if (avoidFruitId && avoidFruitId !== targetFruitId) {
+    excluded.push(avoidFruitId)
+  }
+
   return {
-    fruitType: getRandomNonTargetFruitId(targetFruitId),
+    fruitType: getRandomNonTargetFruitId(excluded),
     isTarget: false,
   }
 }

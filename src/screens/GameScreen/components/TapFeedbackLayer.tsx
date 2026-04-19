@@ -1,5 +1,6 @@
-import React, {memo, useEffect, useRef} from 'react'
-import {Animated, StyleSheet, View} from 'react-native'
+import React, {memo} from 'react'
+import {StyleSheet, View} from 'react-native'
+import Animated, {FadeOut, ZoomIn} from 'react-native-reanimated'
 
 import {theme} from '../../../theme'
 
@@ -33,29 +34,13 @@ const PULSE_STYLE: Record<
 const PULSE_SIZE = theme.layout.landscape.tapPulseSize
 
 function Pulse({x, y, type}: TapFeedback) {
-  const scale = useRef(new Animated.Value(0.2)).current
-  const opacity = useRef(new Animated.Value(0.75)).current
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(scale, {
-        toValue: 2.4,
-        duration: 310,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 310,
-        useNativeDriver: true,
-      }),
-    ]).start()
-  }, [opacity, scale])
-
   const pulseStyle = PULSE_STYLE[type]
 
   return (
     <Animated.View
       pointerEvents="none"
+      entering={ZoomIn.duration(320).springify().mass(0.4)}
+      exiting={FadeOut.duration(200)}
       style={[
         styles.pulse,
         {
@@ -63,8 +48,6 @@ function Pulse({x, y, type}: TapFeedback) {
           top: y - PULSE_SIZE / 2,
           borderColor: pulseStyle.borderColor,
           backgroundColor: pulseStyle.backgroundColor,
-          opacity,
-          transform: [{scale}],
         },
       ]}
     />

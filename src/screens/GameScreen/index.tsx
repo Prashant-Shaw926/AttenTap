@@ -7,6 +7,7 @@ import {
 } from 'react-native'
 
 import {AppScreen} from '../../components/common'
+import {getFruitById, resolveFruitId} from '../../constants/fruits'
 import {FRUIT_SIZE} from '../../constants/gameConfig'
 import {useGame} from '../../hooks/useGame'
 import type {GameScreenProps} from '../../navigation/types'
@@ -19,15 +20,16 @@ import {GameHudRail} from './components/GameHudRail'
 import {GameIdleOverlay} from './components/GameIdleOverlay'
 import {GameSidebarRail} from './components/GameSidebarRail'
 import {useTapFeedbackQueue} from './hooks/useTapFeedbackQueue'
+import {useTapSound} from '../../hooks/ui/useTapSound'
 
 const clamp = (value: number, minimum: number, maximum: number) =>
   Math.min(Math.max(value, minimum), maximum)
 
 export default function GameScreen({navigation, route}: GameScreenProps) {
-  const targetFruitId = route.params?.targetFruitId ?? 'carrot'
   const [boardSize, setBoardSize] = useState({width: 0, height: 0})
   const [isMuted, setIsMuted] = useState(false)
   const {feedbacks, addFeedback} = useTapFeedbackQueue()
+  const {playTapSound} = useTapSound(isMuted)
 
   const fruitSize = useMemo(
     () =>
@@ -65,9 +67,13 @@ export default function GameScreen({navigation, route}: GameScreenProps) {
     boardWidth: boardSize.width,
     boardHeight: boardSize.height,
     fruitSize,
-    initialTargetFruit: targetFruitId,
     onSessionCompleted: handleSessionCompleted,
   })
+
+  const sidebarTargetFruit = targetFruitDefinition
+  const idleOverlayTitle = "Start when\nyou're ready"
+  const idleOverlayDescription =
+    'Your target fruit will be chosen when the round starts.'
 
   const hasVisibleTargetFruit = useMemo(
     () => visibleFruits.some(fruit => fruit.isTarget),
@@ -90,9 +96,10 @@ export default function GameScreen({navigation, route}: GameScreenProps) {
 
       if (tap) {
         addFeedback(locationX, locationY, tap.type)
+        playTapSound()
       }
     },
-    [addFeedback, handleTap, status],
+    [addFeedback, handleTap, playTapSound, status],
   )
 
   const handleFruitTap = useCallback(
@@ -105,9 +112,10 @@ export default function GameScreen({navigation, route}: GameScreenProps) {
 
       if (tap) {
         addFeedback(x, y, tap.type)
+        playTapSound()
       }
     },
-    [addFeedback, handleTap, status],
+    [addFeedback, handleTap, playTapSound, status],
   )
 
   return (
@@ -119,7 +127,7 @@ export default function GameScreen({navigation, route}: GameScreenProps) {
 
       <View style={styles.layout}>
         <GameSidebarRail
-          targetFruit={targetFruitDefinition}
+          targetFruit={sidebarTargetFruit}
           isMuted={isMuted}
           onHomePress={() => {
             resetGame()
@@ -140,8 +148,10 @@ export default function GameScreen({navigation, route}: GameScreenProps) {
             {status === 'idle' ? (
               <GameIdleOverlay
                 targetLabel={targetFruitDefinition?.label?.toLowerCase()}
+                title={idleOverlayTitle}
+                description={idleOverlayDescription}
                 onStart={() => {
-                  startGame(targetFruitId).catch(() => {})
+                  startGame().catch(() => {})
                 }}
               />
             ) : null}

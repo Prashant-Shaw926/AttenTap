@@ -6,15 +6,26 @@ import {theme} from '../../../theme'
 
 interface GameIdleOverlayProps {
   targetLabel?: string
+  title?: string
+  description?: string
   onStart: () => void
 }
 
-export function GameIdleOverlay({targetLabel, onStart}: GameIdleOverlayProps) {
+export function GameIdleOverlay({
+  targetLabel,
+  title,
+  description,
+  onStart,
+}: GameIdleOverlayProps) {
   return (
     <View style={styles.root}>
       <Text style={styles.eyebrow}>Ready</Text>
-      <Text style={styles.title}>{`Tap only\nthe ${targetLabel ?? 'target'}`}</Text>
-      <Text style={styles.description}>2:00 duration, fast scanning, and accurate taps.</Text>
+      <Text style={styles.title}>
+        {title ?? `Tap only\nthe ${targetLabel ?? 'target'}`}
+      </Text>
+      <Text style={styles.description}>
+        {description ?? '2:00 duration, fast scanning, and accurate taps.'}
+      </Text>
       <View style={styles.action}>
         <Button label="Start Session" onPress={onStart} />
       </View>

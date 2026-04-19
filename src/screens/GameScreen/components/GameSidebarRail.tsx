@@ -74,7 +74,13 @@ export function GameSidebarRail({
         <Text style={styles.label}>Home</Text>
       </View>
 
-      <TargetBadge fruit={targetFruit} compact />
+      {targetFruit ? (
+        <TargetBadge fruit={targetFruit} compact />
+      ) : (
+        <View accessibilityLabel="Target pending" style={styles.targetPlaceholder}>
+          <Text style={styles.targetPlaceholderText}>?</Text>
+        </View>
+      )}
 
       <View style={styles.actionGroup}>
         <IconButton accessibilityLabel="Toggle mute" onPress={onToggleMute}>
@@ -100,6 +106,21 @@ const styles = StyleSheet.create({
   actionGroup: {
     alignItems: 'center',
     gap: theme.spacing.xxs,
+  },
+  targetPlaceholder: {
+    width: theme.touch.iconButton,
+    height: theme.touch.iconButton,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: theme.radius.pill,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+    backgroundColor: theme.colors.surfaceMid,
+  },
+  targetPlaceholderText: {
+    fontSize: theme.typography.size.xl,
+    fontWeight: theme.typography.weight.black,
+    color: theme.colors.textSecondary,
   },
   label: {
     fontSize: theme.typography.size.xs,
