@@ -12,8 +12,6 @@ export const configureFirebase = async () => {
   const db = firestore()
 
   if (__DEV__ && !emulatorConnected) {
-    // optional
-    // db.useEmulator('localhost', 8080)
     emulatorConnected = true
   }
 

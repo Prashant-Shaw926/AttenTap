@@ -9,10 +9,9 @@ import {theme} from '../../../theme'
 interface FruitSpriteProps {
   fruit: FruitInstance
   size: number
-  onTap: (fruitId: string, x: number, y: number) => void
 }
 
-function FruitSpriteComponent({fruit, size, onTap}: FruitSpriteProps) {
+function FruitSpriteComponent({fruit, size}: FruitSpriteProps) {
   const definition = getFruitById(fruit.fruitType)
 
   if (!definition) {
@@ -23,6 +22,7 @@ function FruitSpriteComponent({fruit, size, onTap}: FruitSpriteProps) {
 
   return (
     <Animated.View
+      pointerEvents="none"
       entering={ZoomIn.duration(320).springify().damping(12).stiffness(100)}
       exiting={ZoomOut.duration(80)}
       style={[
@@ -35,15 +35,9 @@ function FruitSpriteComponent({fruit, size, onTap}: FruitSpriteProps) {
         },
       ]}
     >
-      <Pressable
-        hitSlop={theme.touch.hitSlop}
-        onPress={() => onTap(fruit.id, fruit.x, fruit.y)}
-        style={styles.pressable}
-      >
-        <View style={styles.surface}>
-          <Icon width={size} height={size} />
-        </View>
-      </Pressable>
+      <View style={styles.surface}>
+        <Icon width={size} height={size} />
+      </View>
     </Animated.View>
   )
 }

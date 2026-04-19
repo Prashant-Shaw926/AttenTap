@@ -166,7 +166,10 @@ export const useFruitSpawner = ({
     lastSpawnedFruitsRef.current = [fruitType, last1].slice(0, 2)
     lastSlotIdRef.current = nextSlot.id
     fruitTimeoutsRef.current[fruitEvent.id] = setTimeout(() => {
-      onExpireRef.current(fruitEvent.id)
+      // Re-check status inside timeout to prevent expiration logic after game end
+      if (statusRef.current === 'playing') {
+        onExpireRef.current(fruitEvent.id)
+      }
       clearFruitTimeout(fruitEvent.id)
     }, visibleMs)
 

@@ -54,14 +54,12 @@ export default function GameScreen({navigation, route}: GameScreenProps) {
     correctTaps,
     incorrectTaps,
     accuracy,
-    totalTaps,
     lastError,
     targetFruitDefinition,
     handleTap,
     startGame,
     resetGame,
     handleCapture,
-    isPersisting,
   } = useGame({
     userId: 'demo-user',
     boardWidth: boardSize.width,
@@ -71,7 +69,7 @@ export default function GameScreen({navigation, route}: GameScreenProps) {
   })
 
   const sidebarTargetFruit = targetFruitDefinition
-  const idleOverlayTitle = "Start when\nyou're ready"
+  const idleOverlayTitle = "Start when you're ready"
   const idleOverlayDescription =
     'Your target fruit will be chosen when the round starts.'
 
@@ -87,6 +85,7 @@ export default function GameScreen({navigation, route}: GameScreenProps) {
 
   const handleBoardTap = useCallback(
     (event: GestureResponderEvent) => {
+      // Guard against taps during session end transition
       if (status !== 'playing') {
         return
       }
@@ -102,26 +101,11 @@ export default function GameScreen({navigation, route}: GameScreenProps) {
     [addFeedback, handleTap, playTapSound, status],
   )
 
-  const handleFruitTap = useCallback(
-    (_fruitId: string, x: number, y: number) => {
-      if (status !== 'playing') {
-        return
-      }
-
-      const tap = handleTap(x, y)
-
-      if (tap) {
-        addFeedback(x, y, tap.type)
-        playTapSound()
-      }
-    },
-    [addFeedback, handleTap, playTapSound, status],
-  )
-
   return (
     <AppScreen>
       <GameCameraCapture
-        enabled={status === 'playing' && hasVisibleTargetFruit}
+        enabled={status === 'playing'}
+        isCapturing={hasVisibleTargetFruit}
         onCapture={handleCapture}
       />
 
@@ -143,7 +127,6 @@ export default function GameScreen({navigation, route}: GameScreenProps) {
             feedbacks={feedbacks}
             onLayout={handleBoardLayout}
             onBoardTap={handleBoardTap}
-            onFruitTap={handleFruitTap}
           >
             {status === 'idle' ? (
               <GameIdleOverlay
@@ -165,8 +148,6 @@ export default function GameScreen({navigation, route}: GameScreenProps) {
           correctTaps={correctTaps}
           incorrectTaps={incorrectTaps}
           accuracy={accuracy}
-          totalTaps={totalTaps}
-          isPersisting={isPersisting}
         />
       </View>
     </AppScreen>

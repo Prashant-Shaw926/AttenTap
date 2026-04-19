@@ -10,8 +10,6 @@ interface GameHudRailProps {
   correctTaps: number
   incorrectTaps: number
   accuracy: number
-  totalTaps: number
-  isPersisting: boolean
 }
 
 export function GameHudRail({
@@ -19,8 +17,6 @@ export function GameHudRail({
   correctTaps,
   incorrectTaps,
   accuracy,
-  totalTaps,
-  isPersisting,
 }: GameHudRailProps) {
   const isLowTime = remainingTimeMs > 0 && remainingTimeMs <= 30_000
 
@@ -34,36 +30,19 @@ export function GameHudRail({
       <MetricTile label="HITS" value={String(correctTaps)} valueColor={theme.colors.success} />
       <MetricTile label="MISSES" value={String(incorrectTaps)} valueColor={theme.colors.error} />
       <MetricTile label="ACCURACY" value={formatPercent(accuracy)} />
-      {/* <MetricTile label="TAPS" value={String(totalTaps)} /> */}
-      {/* {isPersisting ? <Text style={styles.sync}>SYNC</Text> : <View style={styles.syncSpacer} />} */}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   root: {
-    width: theme.layout.landscape.hudWidth,   // 92
+    width: theme.layout.landscape.hudWidth,
     flexShrink: 0,
-    alignItems: 'center',                     // center circles horizontally
-    justifyContent: 'space-evenly',           // distribute tiles evenly top-to-bottom
-    paddingHorizontal: theme.spacing.xxs,     // 4
-    paddingVertical: theme.spacing.sm,        // 12 — gives breathing room at top/bottom
+    alignItems: 'center',
+    justifyContent: 'space-evenly',
+    paddingHorizontal: theme.spacing.xxs,
+    paddingVertical: theme.spacing.md,
     backgroundColor: theme.colors.railBackground,
     borderRadius: theme.radius.pill,
-    // gap: theme.spacing.xxs,
-  },
-  sync: {
-    alignSelf: 'center',
-    paddingHorizontal: theme.spacing.xs,
-    paddingVertical: 2,
-    borderRadius: theme.radius.pill,
-    fontSize: theme.typography.size.xs,
-    fontWeight: theme.typography.weight.bold,
-    letterSpacing: theme.typography.letterSpacing.capsTight,
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.surfaceMid,
-  },
-  syncSpacer: {
-    height: theme.spacing.sm,                // 12 — matches sync badge visual weight
   },
 })

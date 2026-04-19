@@ -75,10 +75,16 @@ export function GameSidebarRail({
       </View>
 
       {targetFruit ? (
-        <TargetBadge fruit={targetFruit} compact />
+        <View style={styles.targetSection}>
+          <TargetBadge fruit={targetFruit} compact tone="dark" />
+          <Text style={styles.label}>Target</Text>
+        </View>
       ) : (
-        <View accessibilityLabel="Target pending" style={styles.targetPlaceholder}>
-          <Text style={styles.targetPlaceholderText}>?</Text>
+        <View style={styles.targetSection}>
+          <View accessibilityLabel="Target pending" style={styles.targetPlaceholder}>
+            <Text style={styles.targetPlaceholderText}>?</Text>
+          </View>
+          <Text style={styles.label}>Target</Text>
         </View>
       )}
 
@@ -127,5 +133,21 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.weight.bold,
     color: theme.colors.textSecondary,
     letterSpacing: theme.typography.letterSpacing.microLabel,
+  },
+  targetSection: {
+    alignItems: 'center',
+    gap: theme.spacing.xxs,
+  },
+  sectionLabel: {
+    fontSize: theme.typography.size.xxs,
+    fontWeight: theme.typography.weight.bold,
+    color: theme.colors.textOnLightMuted,
+    textTransform: 'uppercase',
+    letterSpacing: theme.typography.letterSpacing.capsTight,
+  },
+  fruitName: {
+    fontSize: theme.typography.size.xs,
+    fontWeight: theme.typography.weight.black,
+    color: theme.colors.white,
   },
 })

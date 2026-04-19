@@ -59,7 +59,6 @@ export const chooseFruitType = (
   targetChance = TARGET_FRUIT_SPAWN_CHANCE,
   avoidFruitId?: string | null,
 ): {fruitType: string; isTarget: boolean} => {
-  // If target fruit is forbidden, we must spawn a non-target
   const canSpawnTarget = avoidFruitId !== targetFruitId
   const isTarget = canSpawnTarget && Math.random() <= targetChance
 
@@ -70,7 +69,6 @@ export const chooseFruitType = (
     }
   }
 
-  // Exclude both target and the forbidden fruit if applicable
   const excluded = [targetFruitId]
   if (avoidFruitId && avoidFruitId !== targetFruitId) {
     excluded.push(avoidFruitId)

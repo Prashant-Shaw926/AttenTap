@@ -79,7 +79,6 @@ const variantStyles = {
   primary: StyleSheet.create({
     button: {
       backgroundColor: theme.colors.accent,
-      // ...theme.shadows.button,
     },
     text: {
       color: theme.colors.white,

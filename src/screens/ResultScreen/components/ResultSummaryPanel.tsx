@@ -48,7 +48,8 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.weight.black,
   },
   accuracyBlock: {
-    paddingBottom: theme.spacing.sm,
+    justifyContent: 'center',
+    gap: theme.spacing.tiny,
   },
   accuracyValue: {
     fontSize: theme.typography.size.xxl,
@@ -56,9 +57,10 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   accuracyLabel: {
-    marginTop: theme.spacing.xxs,
     fontSize: theme.typography.size.base,
     color: theme.colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: theme.typography.letterSpacing.microLabel,
   },
   message: {
     maxWidth: theme.layout.landscape.resultMessageWidth,
