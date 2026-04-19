@@ -58,11 +58,13 @@ export function ResultStatsPanel({
 const styles = StyleSheet.create({
   root: {
     width: '100%',
-    maxWidth: theme.layout.landscape.resultStatsWidth,
-    gap: theme.spacing.xs,
+    maxWidth: theme.layout.landscape.resultStatsWidth * 0.85,
+    gap: theme.spacing.xxs,
   },
   card: {
-    gap: theme.spacing.xs,
+    gap: theme.spacing.tiny,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
     ...theme.shadows.card,
   },
   rows: {
@@ -72,7 +74,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing.xxs,
+    paddingVertical: theme.spacing.tiny,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: theme.colors.borderOnLight,
   },
@@ -80,19 +82,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   label: {
-    fontSize: theme.typography.size.base,
+    fontSize: theme.typography.size.xs,
     color: theme.colors.textOnLightMuted,
   },
   value: {
-    fontSize: theme.typography.size.md,
+    fontSize: theme.typography.size.sm,
     fontWeight: theme.typography.weight.bold,
     color: theme.colors.textOnLight,
   },
   actions: {
     flexDirection: 'row',
-    gap: theme.spacing.xs,
+    gap: theme.spacing.xxs,
   },
   actionButton: {
     flex: 1,
+    height: 44,
   },
 })

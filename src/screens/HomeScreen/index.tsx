@@ -14,10 +14,10 @@ export default function HomeScreen({navigation}: HomeScreenProps) {
     <AppScreen>
       <View style={styles.layout}>
         <View style={styles.hero}>
-          <Text style={styles.eyebrow}>Landscape Focus Training</Text>
-          <Text style={styles.title}>Focus Fruit</Text>
+          <Text style={styles.eyebrow}>Focus Training</Text>
+          <Text style={styles.title}>AttenTap</Text>
           <Text style={styles.subtitle}>
-            Spot the target fruit fast, ignore the noise, and keep your accuracy
+            Spot the target item fast, ignore the noise, and keep your accuracy
             high.
           </Text>
           <Button

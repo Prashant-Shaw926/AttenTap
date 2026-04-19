@@ -1,10 +1,10 @@
 import {
-  FRUIT_SPAWN_PADDING,
-  FRUIT_SIZE,
-  TARGET_FRUIT_SPAWN_CHANCE,
+  ITEM_SPAWN_PADDING,
+  ITEM_SIZE,
+  TARGET_ITEM_SPAWN_CHANCE,
 } from '../constants/gameConfig'
-import {getRandomNonTargetFruitId} from '../constants/fruits'
-import type {FruitInstance} from '../types/game.types'
+import {getRandomNonTargetItemId} from '../constants/items'
+import type {ItemInstance} from '../types/game.types'
 
 export interface SpawnBounds {
   width: number
@@ -27,10 +27,10 @@ const getRandomItem = <T,>(items: T[]): T | null => {
 
 const getSpawnLimits = (
   bounds: SpawnBounds,
-  fruitSize: number,
+  itemSize: number,
   padding: number,
 ) => {
-  const radius = fruitSize / 2
+  const radius = itemSize / 2
   const minX = radius + padding
   const maxX = bounds.width - radius - padding
   const minY = radius + padding
@@ -44,54 +44,54 @@ const getSpawnLimits = (
   }
 }
 
-const isTooCloseToFruit = (
+const isTooCloseToItem = (
   slot: PositionedSpawnSlot,
-  fruit: Pick<FruitInstance, 'x' | 'y'>,
+  item: Pick<ItemInstance, 'x' | 'y'>,
   minDistance: number,
 ): boolean => {
-  const dx = slot.x - fruit.x
-  const dy = slot.y - fruit.y
+  const dx = slot.x - item.x
+  const dy = slot.y - item.y
   return Math.hypot(dx, dy) < minDistance
 }
 
-export const chooseFruitType = (
-  targetFruitId: string,
-  targetChance = TARGET_FRUIT_SPAWN_CHANCE,
-  avoidFruitId?: string | null,
-): {fruitType: string; isTarget: boolean} => {
-  const canSpawnTarget = avoidFruitId !== targetFruitId
+export const chooseItemType = (
+  targetItemId: string,
+  targetChance = TARGET_ITEM_SPAWN_CHANCE,
+  avoidItemId?: string | null,
+): {itemType: string; isTarget: boolean} => {
+  const canSpawnTarget = avoidItemId !== targetItemId
   const isTarget = canSpawnTarget && Math.random() <= targetChance
 
   if (isTarget) {
     return {
-      fruitType: targetFruitId,
+      itemType: targetItemId,
       isTarget: true,
     }
   }
 
-  const excluded = [targetFruitId]
-  if (avoidFruitId && avoidFruitId !== targetFruitId) {
-    excluded.push(avoidFruitId)
+  const excluded = [targetItemId]
+  if (avoidItemId && avoidItemId !== targetItemId) {
+    excluded.push(avoidItemId)
   }
 
   return {
-    fruitType: getRandomNonTargetFruitId(excluded),
+    itemType: getRandomNonTargetItemId(excluded),
     isTarget: false,
   }
 }
 
 export const createSpawnLayout = (
   bounds: SpawnBounds,
-  fruitSize = FRUIT_SIZE,
-  padding = FRUIT_SPAWN_PADDING,
+  itemSize = ITEM_SIZE,
+  padding = ITEM_SPAWN_PADDING,
 ): PositionedSpawnSlot[] => {
-  const limits = getSpawnLimits(bounds, fruitSize, padding)
+  const limits = getSpawnLimits(bounds, itemSize, padding)
 
   if (limits.maxX < limits.minX || limits.maxY < limits.minY) {
     return []
   }
 
-  const minDistance = fruitSize + padding / 2
+  const minDistance = itemSize + padding / 2
   const availableWidth = limits.maxX - limits.minX
   const availableHeight = limits.maxY - limits.minY
   const columnCount = Math.max(1, Math.floor(availableWidth / minDistance) + 1)
@@ -113,17 +113,17 @@ export const createSpawnLayout = (
 
 export const chooseSpawnSlot = (
   layout: PositionedSpawnSlot[],
-  activeFruits: Pick<FruitInstance, 'x' | 'y'>[],
+  activeItems: Pick<ItemInstance, 'x' | 'y'>[],
   lastSlotId: string | null,
-  fruitSize = FRUIT_SIZE,
+  itemSize = ITEM_SIZE,
 ): PositionedSpawnSlot | null => {
   if (layout.length === 0) {
     return null
   }
 
-  const minDistance = fruitSize + FRUIT_SPAWN_PADDING / 2
+  const minDistance = itemSize + ITEM_SPAWN_PADDING / 2
   const candidateSlots = layout.filter(
-    slot => !activeFruits.some(fruit => isTooCloseToFruit(slot, fruit, minDistance)),
+    slot => !activeItems.some(item => isTooCloseToItem(slot, item, minDistance)),
   )
 
   if (candidateSlots.length === 0) {

@@ -2,7 +2,7 @@ import React, {useMemo} from 'react'
 import {StyleSheet, View} from 'react-native'
 
 import {AppScreen} from '../../components/common'
-import {resolveFruitId} from '../../constants/fruits'
+import {resolveItemId} from '../../constants/items'
 import type {ResultScreenProps} from '../../navigation/types'
 import {useGameStore} from '../../store/gameStore'
 import {theme} from '../../theme'
@@ -32,10 +32,10 @@ export default function ResultScreen({navigation, route}: ResultScreenProps) {
       {label: 'Incorrect taps', value: session.incorrectTaps},
       {label: 'Total taps', value: session.totalTaps},
       {label: 'Captures', value: bundle.captures.length},
-      {label: 'Fruit events', value: bundle.fruitEvents.length},
+      {label: 'Item events', value: bundle.itemEvents.length},
       {label: 'Duration', value: durationLabel},
     ],
-    [bundle.captures.length, bundle.fruitEvents.length, durationLabel, session],
+    [bundle.captures.length, bundle.itemEvents.length, durationLabel, session],
   )
 
   return (
@@ -64,8 +64,8 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xl,
+    gap: theme.spacing.md,
     paddingHorizontal: theme.layout.screen.horizontalPadding,
-    paddingVertical: theme.layout.screen.verticalPadding,
+    paddingVertical: theme.spacing.sm,
   },
 })

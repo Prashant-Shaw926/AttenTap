@@ -1,13 +1,13 @@
 import {useCallback, useMemo} from 'react'
 import {useShallow} from 'zustand/react/shallow'
 
-import {FRUIT_HIT_SLOP, FRUIT_SIZE, GAME_DURATION_MS} from '../constants/gameConfig'
-import {getFruitById} from '../constants/fruits'
+import {ITEM_HIT_SLOP, ITEM_SIZE, GAME_DURATION_MS} from '../constants/gameConfig'
+import {getItemById} from '../constants/items'
 import {buildCaptureRecordInput} from '../services/camera'
 import {
-  selectActiveFruits,
+  selectActiveItems,
   selectCaptureEvents,
-  selectFruitEvents,
+  selectItemEvents,
   selectGameSession,
   selectGameStatus,
   selectTapEvents,
@@ -15,13 +15,13 @@ import {
 } from '../store/gameStore'
 import type {
   DeviceInfo,
-  FruitEvent,
-  FruitInstance,
+  ItemEvent,
+  ItemInstance,
   SessionBundle,
 } from '../types/game.types'
 import type {TapEvent} from '../types/tap.types'
-import {getNearestFruitAtPoint} from '../utils/geometry'
-import {useFruitSpawner} from './useFruitSpawner'
+import {getNearestItemAtPoint} from '../utils/geometry'
+import {useItemSpawner} from './useItemSpawner'
 import {useSessionPersistence} from './game/useSessionPersistence'
 import {useTimer} from './useTimer'
 
@@ -29,7 +29,7 @@ export interface UseGameOptions {
   userId: string
   boardWidth: number
   boardHeight: number
-  fruitSize?: number
+  itemSize?: number
   autoStart?: boolean
   deviceInfo?: DeviceInfo
   onError?: (error: Error) => void
@@ -41,11 +41,11 @@ export interface UseGameResult {
   status: ReturnType<typeof selectGameStatus>
   sessionId: string | null
   session: ReturnType<typeof selectGameSession>
-  targetFruit: string | null
-  targetFruitDefinition: ReturnType<typeof getFruitById>
-  visibleFruits: FruitInstance[]
+  targetItem: string | null
+  targetItemDefinition: ReturnType<typeof getItemById>
+  visibleItems: ItemInstance[]
   taps: TapEvent[]
-  fruitEvents: FruitEvent[]
+  itemEvents: ItemEvent[]
   remainingTimeMs: number
   accuracy: number
   totalTaps: number
@@ -64,7 +64,7 @@ export const useGame = ({
   userId,
   boardWidth,
   boardHeight,
-  fruitSize = FRUIT_SIZE,
+  itemSize = ITEM_SIZE,
   autoStart = false,
   deviceInfo,
   onError,
@@ -72,18 +72,18 @@ export const useGame = ({
   onSessionCompleted,
 }: UseGameOptions): UseGameResult => {
   const {
-    activeFruits,
+    activeItems,
     captureEvents,
-    fruitEvents,
+    itemEvents,
     session,
     sessionId,
     status,
     taps,
   } = useGameStore(
     useShallow(state => ({
-      activeFruits: selectActiveFruits(state),
+      activeItems: selectActiveItems(state),
       captureEvents: selectCaptureEvents(state),
-      fruitEvents: selectFruitEvents(state),
+      itemEvents: selectItemEvents(state),
       session: selectGameSession(state),
       sessionId: state.sessionId,
       status: selectGameStatus(state),
@@ -93,20 +93,20 @@ export const useGame = ({
 
   const {
     recordCapture,
-    recordFruitAppearance,
-    recordFruitDisappearance,
+    recordItemAppearance,
+    recordItemDisappearance,
     recordTap,
   } = useGameStore(
     useShallow(state => ({
       recordCapture: state.recordCapture,
-      recordFruitAppearance: state.recordFruitAppearance,
-      recordFruitDisappearance: state.recordFruitDisappearance,
+      recordItemAppearance: state.recordItemAppearance,
+      recordItemDisappearance: state.recordItemDisappearance,
       recordTap: state.recordTap,
     })),
   )
 
-  const targetFruit = session?.targetFruit ?? null
-  const visibleFruits = useMemo(() => Object.values(activeFruits), [activeFruits])
+  const targetItem = session?.targetItem ?? null
+  const visibleItems = useMemo(() => Object.values(activeItems), [activeItems])
 
   const {
     endGame,
@@ -118,7 +118,7 @@ export const useGame = ({
     autoStart,
     captureEventsCount: captureEvents.length,
     deviceInfo,
-    fruitEventsCount: fruitEvents.length,
+    itemEventsCount: itemEvents.length,
     onError,
     onSessionCompleted,
     onSessionStarted,
@@ -138,16 +138,16 @@ export const useGame = ({
     },
   })
 
-  useFruitSpawner({
+  useItemSpawner({
     status,
-    targetFruit,
+    targetItem,
     boardWidth,
     boardHeight,
-    fruitSize,
-    activeFruits: visibleFruits,
-    onSpawn: recordFruitAppearance,
-    onExpire: fruitId => {
-      recordFruitDisappearance({fruitId})
+    itemSize,
+    activeItems: visibleItems,
+    onSpawn: recordItemAppearance,
+    onExpire: itemId => {
+      recordItemDisappearance({itemId})
     },
   })
 
@@ -159,26 +159,26 @@ export const useGame = ({
         return null
       }
 
-      const activeFruitList = Object.values(currentState.activeFruits)
-      const hitFruit = getNearestFruitAtPoint(
+      const activeItemList = Object.values(currentState.activeItems)
+      const hitItem = getNearestItemAtPoint(
         {x, y},
-        activeFruitList,
-        fruitSize,
-        FRUIT_HIT_SLOP,
+        activeItemList,
+        itemSize,
+        ITEM_HIT_SLOP,
       )
 
-      if (!hitFruit) {
-        // Ghost hit detection: Check if we hit a fruit that just disappeared (fading out)
+      if (!hitItem) {
+        // Ghost hit detection: Check if we hit an item that just disappeared (fading out)
         const nowMs = Date.now()
-        const recentDisappeared = currentState.fruitEvents.filter(
+        const recentDisappeared = currentState.itemEvents.filter(
           f => f.disappearedAt && nowMs - f.disappearedAt.toMillis() < 250,
         )
 
-        const ghostHit = getNearestFruitAtPoint(
+        const ghostHit = getNearestItemAtPoint(
           {x, y},
           recentDisappeared,
-          fruitSize,
-          FRUIT_HIT_SLOP,
+          itemSize,
+          ITEM_HIT_SLOP,
         )
 
         if (ghostHit) {
@@ -188,7 +188,7 @@ export const useGame = ({
               x,
               y,
               type: 'correct',
-              fruitId: ghostHit.id,
+              itemId: ghostHit.id,
             })
           }
 
@@ -203,44 +203,44 @@ export const useGame = ({
         })
       }
 
-      // If we hit a fruit, we record the tap and immediately mark the fruit as disappeared
-      const tapType = hitFruit.isTarget ? 'correct' : 'incorrect'
+      // If we hit an item, we record the tap and immediately mark the item as disappeared
+      const tapType = hitItem.isTarget ? 'correct' : 'incorrect'
       const tap = recordTap({
         x,
         y,
         type: tapType,
-        fruitId: hitFruit.id,
+        itemId: hitItem.id,
       })
 
-      recordFruitDisappearance({
-        fruitId: hitFruit.id,
-        wasCorrectlyTapped: hitFruit.isTarget,
+      recordItemDisappearance({
+        itemId: hitItem.id,
+        wasCorrectlyTapped: hitItem.isTarget,
       })
 
       return tap
     },
-    [fruitSize, recordFruitDisappearance, recordTap],
+    [itemSize, recordItemDisappearance, recordTap],
   )
 
   const handleCapture = useCallback(
     (path: string, timestampMs: number) => {
-      const {status, sessionId, session, activeFruits} = useGameStore.getState()
+      const {status, sessionId, session, activeItems} = useGameStore.getState()
 
       if (status !== 'playing' || !sessionId || !session) {
         return
       }
 
-      const activeFruitList = Object.values(activeFruits)
-      if (activeFruitList.length === 0) {
+      const activeItemList = Object.values(activeItems)
+      if (activeItemList.length === 0) {
         return
       }
 
-      const targetFruitIds = activeFruitList
-        .filter(fruit => fruit.isTarget)
-        .map(fruit => fruit.id)
+      const targetItemIds = activeItemList
+        .filter(item => item.isTarget)
+        .map(item => item.id)
 
       // Only record if there are targets visible to keep metrics relevant
-      if (targetFruitIds.length === 0) {
+      if (targetItemIds.length === 0) {
         return
       }
 
@@ -249,8 +249,8 @@ export const useGame = ({
           sessionId,
           path,
           timestampMs,
-          visibleFruitIds: activeFruitList.map(f => f.id),
-          targetFruitIds,
+          visibleItemIds: activeItemList.map(f => f.id),
+          targetItemIds,
         }),
       )
     },
@@ -261,11 +261,11 @@ export const useGame = ({
     status,
     sessionId,
     session,
-    targetFruit,
-    targetFruitDefinition: targetFruit ? getFruitById(targetFruit) : undefined,
-    visibleFruits,
+    targetItem,
+    targetItemDefinition: targetItem ? getItemById(targetItem) : undefined,
+    visibleItems,
     taps,
-    fruitEvents,
+    itemEvents,
     remainingTimeMs,
     accuracy: session?.accuracy ?? 0,
     totalTaps: session?.totalTaps ?? 0,

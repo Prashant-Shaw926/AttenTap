@@ -13,7 +13,7 @@ export interface SessionDocument {
   userId: string
   startedAt: FirebaseFirestoreTypes.Timestamp
   endedAt: FirebaseFirestoreTypes.Timestamp | null
-  targetFruit: string
+  targetItem: string
   totalTaps: number
   correctTaps: number
   incorrectTaps: number
@@ -21,9 +21,9 @@ export interface SessionDocument {
   deviceInfo: DeviceInfo
 }
 
-export interface FruitEvent {
+export interface ItemEvent {
   id: string
-  fruitType: string
+  itemType: string
   isTarget: boolean
   slotId: string
   x: number
@@ -33,29 +33,29 @@ export interface FruitEvent {
   wasCorrectlyTapped: boolean
 }
 
-export interface FruitInstance extends FruitEvent {}
+export interface ItemInstance extends ItemEvent {}
 
 export interface CaptureEvent {
   id: string
   sessionId: string
   path: string
   timestamp: FirebaseFirestoreTypes.Timestamp
-  visibleFruitIds: string[]
-  targetFruitIds: string[]
+  visibleItemIds: string[]
+  targetItemIds: string[]
 }
 
 export interface SessionBundle {
   sessionId: string
   session: SessionDocument
   taps: TapEvent[]
-  fruitEvents: FruitEvent[]
+  itemEvents: ItemEvent[]
   captures: CaptureEvent[]
 }
 
 export interface StartSessionInput {
   sessionId?: string
   userId: string
-  targetFruit: string
+  targetItem: string
   deviceInfo?: DeviceInfo
   startedAt?: FirebaseFirestoreTypes.Timestamp
 }
@@ -64,9 +64,9 @@ export interface EndSessionInput {
   endedAt?: FirebaseFirestoreTypes.Timestamp
 }
 
-export interface RecordFruitAppearanceInput {
-  fruitId?: string
-  fruitType: string
+export interface RecordItemAppearanceInput {
+  itemId?: string
+  itemType: string
   isTarget: boolean
   slotId: string
   x: number
@@ -74,8 +74,8 @@ export interface RecordFruitAppearanceInput {
   appearedAt?: FirebaseFirestoreTypes.Timestamp
 }
 
-export interface RecordFruitDisappearanceInput {
-  fruitId: string
+export interface RecordItemDisappearanceInput {
+  itemId: string
   disappearedAt?: FirebaseFirestoreTypes.Timestamp
   wasCorrectlyTapped?: boolean
 }
@@ -85,6 +85,6 @@ export interface RecordCaptureInput {
   sessionId: string
   path: string
   timestamp?: FirebaseFirestoreTypes.Timestamp
-  visibleFruitIds: string[]
-  targetFruitIds: string[]
+  visibleItemIds: string[]
+  targetItemIds: string[]
 }

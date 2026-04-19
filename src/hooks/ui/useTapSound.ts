@@ -14,7 +14,7 @@ export const useTapSound = (isMuted: boolean) => {
   useEffect(() => {
     // Load the sound from native assets ('android/app/src/main/res/raw/' or iOS bundle)
     const sound = new Sound(
-      'fruit_tap_sound.wav',
+      'item_tap_sound.wav',
       Sound.MAIN_BUNDLE,
       (error) => {
         if (error) {

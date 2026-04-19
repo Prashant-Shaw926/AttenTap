@@ -1,27 +1,27 @@
 import React from 'react'
 import {StyleSheet, Text, View} from 'react-native'
 
-import type {FruitDefinition} from '../../constants/fruits'
+import type {ItemDefinition} from '../../constants/items'
 import {theme} from '../../theme'
 
 interface TargetBadgeProps {
-  fruit: FruitDefinition | undefined
+  item: ItemDefinition | undefined
   label?: string
   compact?: boolean
   tone?: 'light' | 'dark'
 }
 
 export function TargetBadge({
-  fruit,
+  item,
   label = 'TARGET',
   compact = false,
   tone = 'light',
 }: TargetBadgeProps) {
-  if (!fruit) {
+  if (!item) {
     return null
   }
 
-  const Icon = fruit.Icon
+  const Icon = item.Icon
   const isLight = tone === 'light'
   const iconSize = compact
     ? theme.layout.landscape.compactTargetIcon
@@ -42,10 +42,10 @@ export function TargetBadge({
         <Icon width={iconSize} height={iconSize} />
         {compact ? (
           <Text style={[styles.compactName, isLight ? styles.compactNameLight : null]}>
-            {fruit.label}
+            {item.label}
           </Text>
         ) : (
-          <Text style={[styles.name, isLight ? styles.nameLight : null]}>{fruit.label}</Text>
+          <Text style={[styles.name, isLight ? styles.nameLight : null]}>{item.label}</Text>
         )}
       </View>
     </View>

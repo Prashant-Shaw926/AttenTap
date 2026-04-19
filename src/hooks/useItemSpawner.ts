@@ -1,75 +1,75 @@
 import {useCallback, useEffect, useRef} from 'react'
 
 import {
-  FRUIT_SPAWN_INTERVAL_MS,
-  FRUIT_VISIBLE_MS,
-  MAX_ACTIVE_FRUITS,
+  ITEM_SPAWN_INTERVAL_MS,
+  ITEM_VISIBLE_MS,
+  MAX_ACTIVE_ITEMS,
 } from '../constants/gameConfig'
 import {
-  chooseFruitType,
+  chooseItemType,
   chooseSpawnSlot,
   createSpawnLayout,
-} from '../utils/fruitSpawner'
+} from '../utils/itemSpawner'
 import type {
-  FruitEvent,
-  FruitInstance,
+  ItemEvent,
+  ItemInstance,
   GameStatus,
-  RecordFruitAppearanceInput,
+  RecordItemAppearanceInput,
 } from '../types/game.types'
 
-interface UseFruitSpawnerOptions {
+interface UseItemSpawnerOptions {
   status: GameStatus
-  targetFruit: string | null
+  targetItem: string | null
   boardWidth: number
   boardHeight: number
-  fruitSize: number
-  activeFruits: FruitInstance[]
-  onSpawn: (input: RecordFruitAppearanceInput) => FruitEvent | null
-  onExpire: (fruitId: string) => void
+  itemSize: number
+  activeItems: ItemInstance[]
+  onSpawn: (input: RecordItemAppearanceInput) => ItemEvent | null
+  onExpire: (itemId: string) => void
   spawnIntervalMs?: number
   visibleMs?: number
-  maxActiveFruits?: number
+  maxActiveItems?: number
 }
 
-interface UseFruitSpawnerResult {
-  spawnFruit: () => FruitEvent | null
+interface UseItemSpawnerResult {
+  spawnItem: () => ItemEvent | null
 }
 
-export const useFruitSpawner = ({
+export const useItemSpawner = ({
   status,
-  targetFruit,
+  targetItem,
   boardWidth,
   boardHeight,
-  fruitSize,
-  activeFruits,
+  itemSize,
+  activeItems,
   onSpawn,
   onExpire,
-  spawnIntervalMs = FRUIT_SPAWN_INTERVAL_MS,
-  visibleMs = FRUIT_VISIBLE_MS,
-  maxActiveFruits = MAX_ACTIVE_FRUITS,
-}: UseFruitSpawnerOptions): UseFruitSpawnerResult => {
+  spawnIntervalMs = ITEM_SPAWN_INTERVAL_MS,
+  visibleMs = ITEM_VISIBLE_MS,
+  maxActiveItems = MAX_ACTIVE_ITEMS,
+}: UseItemSpawnerOptions): UseItemSpawnerResult => {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const fruitTimeoutsRef = useRef<
+  const itemTimeoutsRef = useRef<
     Record<string, ReturnType<typeof setTimeout>>
   >({})
   const statusRef = useRef(status)
-  const targetFruitRef = useRef(targetFruit)
+  const targetItemRef = useRef(targetItem)
   const boardWidthRef = useRef(boardWidth)
   const boardHeightRef = useRef(boardHeight)
-  const fruitSizeRef = useRef(fruitSize)
-  const activeFruitsRef = useRef(activeFruits)
+  const itemSizeRef = useRef(itemSize)
+  const activeItemsRef = useRef(activeItems)
   const onSpawnRef = useRef(onSpawn)
   const onExpireRef = useRef(onExpire)
   const lastSlotIdRef = useRef<string | null>(null)
-  const lastSpawnedFruitsRef = useRef<string[]>([])
+  const lastSpawnedItemsRef = useRef<string[]>([])
 
   useEffect(() => {
     statusRef.current = status
   }, [status])
 
   useEffect(() => {
-    targetFruitRef.current = targetFruit
-  }, [targetFruit])
+    targetItemRef.current = targetItem
+  }, [targetItem])
 
   useEffect(() => {
     boardWidthRef.current = boardWidth
@@ -77,12 +77,12 @@ export const useFruitSpawner = ({
   }, [boardHeight, boardWidth])
 
   useEffect(() => {
-    fruitSizeRef.current = fruitSize
-  }, [fruitSize])
+    itemSizeRef.current = itemSize
+  }, [itemSize])
 
   useEffect(() => {
-    activeFruitsRef.current = activeFruits
-  }, [activeFruits])
+    activeItemsRef.current = activeItems
+  }, [activeItems])
 
   useEffect(() => {
     onSpawnRef.current = onSpawn
@@ -92,15 +92,15 @@ export const useFruitSpawner = ({
     onExpireRef.current = onExpire
   }, [onExpire])
 
-  const clearFruitTimeout = useCallback((fruitId: string) => {
-    const timeout = fruitTimeoutsRef.current[fruitId]
+  const clearItemTimeout = useCallback((itemId: string) => {
+    const timeout = itemTimeoutsRef.current[itemId]
 
     if (!timeout) {
       return
     }
 
     clearTimeout(timeout)
-    delete fruitTimeoutsRef.current[fruitId]
+    delete itemTimeoutsRef.current[itemId]
   }, [])
 
   const clearAllTimers = useCallback(() => {
@@ -109,72 +109,72 @@ export const useFruitSpawner = ({
       intervalRef.current = null
     }
 
-    Object.keys(fruitTimeoutsRef.current).forEach(clearFruitTimeout)
-  }, [clearFruitTimeout])
+    Object.keys(itemTimeoutsRef.current).forEach(clearItemTimeout)
+  }, [clearItemTimeout])
 
-  const spawnFruit = useCallback((): FruitEvent | null => {
+  const spawnItem = useCallback((): ItemEvent | null => {
     if (
       statusRef.current !== 'playing' ||
-      !targetFruitRef.current ||
+      !targetItemRef.current ||
       boardWidthRef.current <= 0 ||
       boardHeightRef.current <= 0
     ) {
       return null
     }
 
-    if (activeFruitsRef.current.length >= maxActiveFruits) {
+    if (activeItemsRef.current.length >= maxActiveItems) {
       return null
     }
 
     const layout = createSpawnLayout({
       width: boardWidthRef.current,
       height: boardHeightRef.current,
-    }, fruitSizeRef.current)
+    }, itemSizeRef.current)
     const nextSlot = chooseSpawnSlot(
       layout,
-      activeFruitsRef.current,
+      activeItemsRef.current,
       lastSlotIdRef.current,
-      fruitSizeRef.current,
+      itemSizeRef.current,
     )
 
     if (!nextSlot) {
       return null
     }
 
-    // Determine if we need to avoid a fruit type (if it appeared twice in a row)
-    const [last1, last2] = lastSpawnedFruitsRef.current
-    const avoidFruitId = last1 && last1 === last2 ? last1 : null
+    // Determine if we need to avoid an item type (if it appeared twice in a row)
+    const [last1, last2] = lastSpawnedItemsRef.current
+    const avoidItemId = last1 && last1 === last2 ? last1 : null
 
-    const {fruitType, isTarget} = chooseFruitType(
-      targetFruitRef.current,
+    const {itemType, isTarget} = chooseItemType(
+      targetItemRef.current,
       undefined,
-      avoidFruitId,
+      avoidItemId,
     )
-    const fruitEvent = onSpawnRef.current({
-      fruitType,
+    const itemEvent = onSpawnRef.current({
+      itemType,
       isTarget,
       slotId: nextSlot.id,
       x: nextSlot.x,
       y: nextSlot.y,
     })
 
-    if (!fruitEvent) {
+    if (!itemEvent) {
       return null
     }
 
     // Update history
-    lastSpawnedFruitsRef.current = [fruitType, last1].slice(0, 2)
+    lastSpawnedItemsRef.current = [itemType, last1].slice(0, 2)
     lastSlotIdRef.current = nextSlot.id
-    fruitTimeoutsRef.current[fruitEvent.id] = setTimeout(() => {
+    itemTimeoutsRef.current[itemEvent.id] = setTimeout(() => {
       // Re-check status inside timeout to prevent expiration logic after game end
       if (statusRef.current === 'playing') {
-        onExpireRef.current(fruitEvent.id)
+        onExpireRef.current(itemEvent.id)
       }
-      clearFruitTimeout(fruitEvent.id)
+      clearItemTimeout(itemEvent.id)
     }, visibleMs)
 
-    return fruitEvent
-  }, [clearFruitTimeout, maxActiveFruits, visibleMs])
+    return itemEvent
+  }, [clearItemTimeout, maxActiveItems, visibleMs])
 
   useEffect(() => {
     if (status !== 'playing' || boardWidth <= 0 || boardHeight <= 0) {
@@ -182,8 +182,8 @@ export const useFruitSpawner = ({
       return
     }
 
-    spawnFruit()
-    intervalRef.current = setInterval(spawnFruit, spawnIntervalMs)
+    spawnItem()
+    intervalRef.current = setInterval(spawnItem, spawnIntervalMs)
 
     return () => {
       clearAllTimers()
@@ -192,7 +192,7 @@ export const useFruitSpawner = ({
     boardHeight,
     boardWidth,
     clearAllTimers,
-    spawnFruit,
+    spawnItem,
     spawnIntervalMs,
     status,
   ])
@@ -204,6 +204,6 @@ export const useFruitSpawner = ({
   }, [clearAllTimers])
 
   return {
-    spawnFruit,
+    spawnItem,
   }
 }

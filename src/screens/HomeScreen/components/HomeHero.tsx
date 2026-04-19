@@ -13,11 +13,11 @@ export function HomeHero({onStart}: HomeHeroProps) {
     <View style={styles.root}>
       <SectionHeader
         eyebrow="Landscape Focus Training"
-        title="Focus Fruit"
-        subtitle="Spot the target fruit fast, ignore the noise, and keep your accuracy high."
+        title="AttenTap"
+        subtitle="Spot the target item fast, ignore the noise, and keep your accuracy high."
       />
 
-      <Text style={styles.display}>Focus{'\n'}Fruit</Text>
+      <Text style={styles.display}>Atten{'\n'}Tap</Text>
 
       <Button label="Play Now" onPress={onStart} style={styles.button} />
     </View>
