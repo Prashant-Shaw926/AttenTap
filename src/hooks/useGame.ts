@@ -1,3 +1,10 @@
+/**
+ * Hook: useGame
+ * 
+ * The primary interface for controlling the AttenTap gameplay logic.
+ * Orchestrates timers, item spawning, tap handling, and camera capture coordination.
+ * Connects the UI layer to the core game store and persistence services.
+ */
 import {useCallback, useMemo} from 'react'
 import {useShallow} from 'zustand/react/shallow'
 
@@ -224,13 +231,18 @@ export const useGame = ({
 
   const handleCapture = useCallback(
     (path: string, timestampMs: number) => {
-      const {status, sessionId, session, activeItems} = useGameStore.getState()
+      const {
+        status: currentStatus,
+        sessionId: currentSessionId,
+        session: currentSession,
+        activeItems: currentActiveItems,
+      } = useGameStore.getState()
 
-      if (status !== 'playing' || !sessionId || !session) {
+      if (currentStatus !== 'playing' || !currentSessionId || !currentSession) {
         return
       }
 
-      const activeItemList = Object.values(activeItems)
+      const activeItemList = Object.values(currentActiveItems)
       if (activeItemList.length === 0) {
         return
       }
@@ -246,10 +258,10 @@ export const useGame = ({
 
       recordCapture(
         buildCaptureRecordInput({
-          sessionId,
+          sessionId: currentSessionId,
           path,
           timestampMs,
-          visibleItemIds: activeItemList.map(f => f.id),
+          visibleItemIds: activeItemList.map(item => item.id),
           targetItemIds,
         }),
       )

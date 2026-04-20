@@ -3,7 +3,6 @@ import {Animated, Image, StyleSheet, View} from 'react-native'
 
 import {AppScreen} from '../../components/common'
 import type {SplashScreenProps} from '../../navigation/types'
-import {theme} from '../../theme'
 
 export default function SplashScreen({navigation}: SplashScreenProps) {
   const fadeAnim = useRef(new Animated.Value(0)).current

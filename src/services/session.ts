@@ -1,3 +1,10 @@
+/**
+ * Session Service
+ * 
+ * Manages game session data persistence to Firestore, including batching and 
+ * chunking logic to handle high-frequency events (taps, captures) within 
+ * platform limits.
+ */
 import type {FirebaseFirestoreTypes} from '@react-native-firebase/firestore'
 
 import {FIRESTORE_BATCH_WRITE_LIMIT} from '../constants/gameConfig'
@@ -142,7 +149,7 @@ const commitWrites = async (writes: FirestoreWrite[]): Promise<void> => {
   }
 }
 
-export const flushSessionupdates = async (
+export const flushSessionUpdates = async (
   payload: SessionFlushPayload,
 ): Promise<void> => {
   await commitWrites(buildSessionWrites(payload))
@@ -151,7 +158,7 @@ export const flushSessionupdates = async (
 export const saveSessionBundle = async (
   bundle: SessionBundle,
 ): Promise<void> => {
-  await flushSessionupdates({
+  await flushSessionUpdates({
     sessionId: bundle.sessionId,
     session: bundle.session,
     taps: bundle.taps,

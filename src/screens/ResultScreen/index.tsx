@@ -2,7 +2,6 @@ import React, {useMemo} from 'react'
 import {StyleSheet, View} from 'react-native'
 
 import {AppScreen} from '../../components/common'
-import {resolveItemId} from '../../constants/items'
 import type {ResultScreenProps} from '../../navigation/types'
 import {useGameStore} from '../../store/gameStore'
 import {theme} from '../../theme'
