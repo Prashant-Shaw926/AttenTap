@@ -175,7 +175,7 @@ export const useGame = ({
       )
 
       if (!hitItem) {
-        // Ghost hit detection: Check if we hit an item that just disappeared (fading out)
+
         const nowMs = Date.now()
         const recentDisappeared = currentState.itemEvents.filter(
           f => f.disappearedAt && nowMs - f.disappearedAt.toMillis() < 250,
@@ -189,7 +189,6 @@ export const useGame = ({
         )
 
         if (ghostHit) {
-          // If it was a target that expired (wasn't tapped yet), count it as a late hit
           if (ghostHit.isTarget && !ghostHit.wasCorrectlyTapped) {
             return recordTap({
               x,
@@ -199,7 +198,6 @@ export const useGame = ({
             })
           }
 
-          // Otherwise, it was already tapped or it's a non-target; ignore to avoid false misses
           return null
         }
 
@@ -210,7 +208,6 @@ export const useGame = ({
         })
       }
 
-      // If we hit an item, we record the tap and immediately mark the item as disappeared
       const tapType = hitItem.isTarget ? 'correct' : 'incorrect'
       const tap = recordTap({
         x,
@@ -251,7 +248,6 @@ export const useGame = ({
         .filter(item => item.isTarget)
         .map(item => item.id)
 
-      // Only record if there are targets visible to keep metrics relevant
       if (targetItemIds.length === 0) {
         return
       }

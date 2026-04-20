@@ -3,13 +3,12 @@ import uuid from 'react-native-uuid'
 
 import type {TapFeedback} from '../components/TapFeedbackLayer'
 
-const TAP_FEEDBACK_DURATION_MS = 1000 // Keep in state longer to allow for exiting animations
+const TAP_FEEDBACK_DURATION_MS = 1000
 
 export const useTapFeedbackQueue = () => {
   const [feedbacks, setFeedbacks] = useState<TapFeedback[]>([])
   const timeoutIdsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
-  // Cleanup all timeouts on unmount
   useEffect(() => {
     const currentTimeouts = timeoutIdsRef.current
     return () => {
