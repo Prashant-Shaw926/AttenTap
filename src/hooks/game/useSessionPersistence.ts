@@ -1,3 +1,10 @@
+/**
+ * Hook: useSessionPersistence
+ * 
+ * Manages the lifecycle and automatic persistence of game sessions. 
+ * Handles periodic data flushing, background state transitions, and 
+ * error reporting for session-related operations.
+ */
 import {AppState} from 'react-native'
 import {useCallback, useEffect, useRef, useState} from 'react'
 
@@ -5,9 +12,7 @@ import {
   SESSION_FLUSH_BATCH_SIZE,
   SESSION_FLUSH_INTERVAL_MS,
 } from '../../constants/gameConfig'
-import {
-  getRandomItemId,
-} from '../../constants/items'
+import {getRandomItemId} from '../../constants/items'
 import type {
   DeviceInfo,
   GameStatus,
@@ -16,7 +21,7 @@ import type {
 } from '../../types/game.types'
 import {
   createSessionRecord,
-  flushSessionupdates,
+  flushSessionUpdates,
   saveSessionBundle,
 } from '../../services/session'
 import {useGameStore} from '../../store/gameStore'
@@ -110,7 +115,7 @@ export function useSessionPersistence({
     setIsPersisting(true)
 
     try {
-      await flushSessionupdates({
+      await flushSessionUpdates({
         sessionId: currentState.sessionId,
         session: currentState.session,
         taps: pendingTaps,

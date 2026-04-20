@@ -1,3 +1,10 @@
+/**
+ * Game Store
+ * 
+ * Central Zustand store for game state, session tracking, and event logs.
+ * Handles the flat structure of taps, item events, and captures to facilitate 
+ * efficient synchronization with Firestore.
+ */
 import {Platform} from 'react-native'
 import {create} from 'zustand'
 

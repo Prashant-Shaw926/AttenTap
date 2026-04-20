@@ -1,3 +1,10 @@
+/**
+ * Hook: useItemSpawner
+ * 
+ * Manages the generation and lifecycle of game items on the board.
+ * Responsible for selecting spawn slots, avoiding consecutive duplicates, 
+ * and handling automatic item expiration/cleanup while the game is active.
+ */
 import {useCallback, useEffect, useRef} from 'react'
 
 import {

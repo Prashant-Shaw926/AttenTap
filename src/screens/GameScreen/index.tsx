@@ -1,3 +1,9 @@
+/**
+ * GameScreen
+ * 
+ * The core gameplay view. Manages high-level UI layout, integrates the camera 
+ * for analysis, and coordinates the board size/scaling based on device orientation.
+ */
 import React, {useCallback, useMemo, useState} from 'react'
 import {
   StyleSheet,
@@ -7,12 +13,12 @@ import {
 } from 'react-native'
 
 import {AppScreen} from '../../components/common'
-import {getItemById, resolveItemId} from '../../constants/items'
 import {ITEM_SIZE} from '../../constants/gameConfig'
 import {useGame} from '../../hooks/useGame'
+import {useTapSound} from '../../hooks/ui/useTapSound'
 import type {GameScreenProps} from '../../navigation/types'
-import type {SessionBundle} from '../../types/game.types'
 import {theme} from '../../theme'
+import type {SessionBundle} from '../../types/game.types'
 import {GameBoard} from './components/GameBoard'
 import {GameCameraCapture} from './components/GameCameraCapture'
 import {GameErrorBanner} from './components/GameErrorBanner'
@@ -20,12 +26,11 @@ import {GameHudRail} from './components/GameHudRail'
 import {GameIdleOverlay} from './components/GameIdleOverlay'
 import {GameSidebarRail} from './components/GameSidebarRail'
 import {useTapFeedbackQueue} from './hooks/useTapFeedbackQueue'
-import {useTapSound} from '../../hooks/ui/useTapSound'
 
 const clamp = (value: number, minimum: number, maximum: number) =>
   Math.min(Math.max(value, minimum), maximum)
 
-export default function GameScreen({navigation, route}: GameScreenProps) {
+export default function GameScreen({navigation, route: _route}: GameScreenProps) {
   const [boardSize, setBoardSize] = useState({width: 0, height: 0})
   const [isMuted, setIsMuted] = useState(false)
   const {feedbacks, addFeedback} = useTapFeedbackQueue()

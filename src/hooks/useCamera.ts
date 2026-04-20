@@ -1,3 +1,10 @@
+/**
+ * Hook: useCameraCapture
+ * 
+ * Manages the high-frequency photo capture logic for gameplay analysis.
+ * Uses a dual-trigger strategy: immediate capture when a target appears, 
+ * followed by a stable interval-based sampling loop while the target remains visible.
+ */
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {
   useCameraDevice,
@@ -36,7 +43,6 @@ export const useCameraCapture = ({
   const isCapturingRef = useRef(isCapturing)
   const enabledRef = useRef(enabled)
 
-  // Keep refs in sync for the async capturePhoto callback
   useEffect(() => {
     onCaptureRef.current = onCapture
   }, [onCapture])
@@ -49,7 +55,6 @@ export const useCameraCapture = ({
     enabledRef.current = enabled
   }, [enabled])
 
-  // Handle permission request
   useEffect(() => {
     if (!hasPermission) {
       requestPermission().catch(() => {})
@@ -57,7 +62,7 @@ export const useCameraCapture = ({
   }, [hasPermission, requestPermission])
 
   const capturePhoto = useCallback(async () => {
-    // Guards: Stop if not enabled, not capturing (no target), no permission, hardware not ready, or already capturing
+    // Guards: Stop if not enabled, not capturing (no target visible), no permission, hardware not ready, or already capturing
     if (
       !enabledRef.current ||
       !isCapturingRef.current ||
@@ -83,7 +88,7 @@ export const useCameraCapture = ({
         {},
       )
       onCaptureRef.current(photo.filePath, Date.now())
-    } catch (error) {
+    } catch {
       // Ignore capture failures to keep gameplay uninterrupted
     } finally {
       captureInFlightRef.current = false

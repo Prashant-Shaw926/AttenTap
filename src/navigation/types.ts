@@ -1,6 +1,5 @@
 import type {StackScreenProps} from '@react-navigation/stack'
 
-import type {ItemId} from '../constants/items'
 import type {SessionBundle} from '../types/game.types'
 
 export type RootStackParamList = {
