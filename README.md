@@ -1,97 +1,93 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# AttenTap
 
-# Getting Started
+**AttenTap** is a high-performance, focus-based tapping game built with React Native. The application challenges users to maintain attention and react quickly to target items while tracking detailed interaction metrics.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## 💡 Why AttenTap?
 
-## Step 1: Start Metro
+AttenTap explores how user attention can be measured through interaction patterns and real-time signals. By combining gameplay data with camera capture, it demonstrates a foundation for attention-aware applications.
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## 📱 Project Overview
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+AttenTap is designed to capture and analyze user attention through a dynamic game loop. Users must tap a specific target item while ignoring distractors within a timed session. The app precisely tracks every tap, item appearance, and captures synchronized camera frames to analyze user attention during gameplay.
 
-```sh
-# Using npm
-npm start
+## ✨ Key Features
 
-# OR using Yarn
-yarn start
+*   **Real-time Gameplay**: Fast-paced item spawning with target-based tapping and time constraints.
+*   **Precision Tracking**: Every tap (Correct, Incorrect, Background) is logged with high-precision timestamps.
+*   **Synchronized Camera Capture**: Dual-strategy capture (Immediate on spawn + Interval during visibility) using Vision Camera v5.
+*   **Batch Store-to-Cloud Sync**: Uses an in-memory buffer (Zustand) to aggregate session data, syncing to Firestore only at completion to optimize performance and battery life.
+*   **Fairness Algorithms**: Implements "Hit Slop" for touch forgiveness and "Ghost Hit" buffers to handle latency edge cases.
+
+## 🛠 Tech Stack & Decisions
+
+### Core Frameworks
+*   **React Native 0.85 (CLI)**: Chosen for maximum control over native modules (Camera, Audio).
+*   **TypeScript**: Ensures type safety across the complex "Start -> Buffer -> Sync" lifecycle.
+
+### State Management: Why Zustand v5?
+We selected **Zustand** over Redux due to:
+*   **Minimal Boilerplate**: Faster iteration on session event logs.
+*   **Shallow State Subscription**: Components only re-render when their specific game slice updates, critical for maintaining 60FPS.
+*   **Native Compatibility**: Easily accessible in non-React files for background logging.
+
+### Hardware & Persistence
+*   **Vision Camera v5**: Leverages the latest low-latency hardware APIs for "warm" camera states and rapid frame processing.
+*   **Nitro Modules**: High-performance JSI-based communication between JS and Native layers.
+*   **Firebase Firestore**: Handles multi-session metrics with sub-collections for `taps`, `itemEvents`, and `captures`.
+
+## 🚀 Setup Instructions
+
+### 1. Prerequisites
+*   **Node.js**: v22.11.0 or higher
+*   **Java Development Kit (JDK)**: v17+
+*   **Android SDK**: API Level 34+
+*   **Physical Device**: Recommended for Camera features (Vision Camera stability on emulators varies).
+
+### 2. Firebase Configuration
+1.  Create a project in the [Firebase Console](https://console.firebase.google.com/).
+2.  Add an Android app with package name `com.focusfruit`.
+> Note: The package name remains `com.focusfruit` for Firebase configuration, while the app is branded as AttenTap.
+3.  Download `google-services.json` and place it in `android/app/`.
+4.  Enable **Firestore Database** in Test Mode (or apply secure rules).
+
+### 3. Installation
+```bash
+# Clone the repository
+git clone <repo-url>
+cd AttenTap
+
+# Install dependencies
+npm install
 ```
 
-## Step 2: Build and run your app
+### 4. Running the App
+```bash
+# Terminal 1: Start Metro Bundler
+npx react-native start --reset-cache
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+# Terminal 2: Run on Android
+npx react-native run-android
 ```
 
-### iOS
+## 🧠 Assumptions & Technical Logic
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+### Gameplay Fairness
+*   **Hit Slop**: Interactive items feature a 15-20% touch padding area to reduce frustration from close-proximity misses.
+*   **Ghost Hit Buffer (250ms)**: If an item despawns exactly as a tap arrives, the system validates the hit against a buffer of recently expired items to account for human/device latency.
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+### Data Integrity
+*   **Local-to-Cloud Pipeline**: Camera captures are stored in the temporary app directory. The local URI is persisted in Firestore; if a sync fails, data remains in the store's "retry queue."
+*   **Session Lifecycle**: A session starts with a "Warm Camera" trigger to eliminate the 500-1000ms delay of hardware initialization during active gameplay.
 
-```sh
-bundle install
-```
+### System Permissions
+The app assumes the user will grant **Camera** and **Storage** permission at the first session start. Handling rejection is architectural (app goes into 'Restricted Mode').
 
-Then, and every time you update your native dependencies, run:
+## 🎥 Demo
 
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+A short demo video showcasing gameplay, tap detection, and result tracking is included in the submission folder.
+---
+For technical implementation details, see:
+- [Architecture Documentation](docs/architecture.md)
+- [Camera Logic](docs/camera.md)
+- [Firestore Schema](docs/firestore.md)
+- [Gameplay Mechanics](docs/gameplay.md)

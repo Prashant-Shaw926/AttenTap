@@ -1,0 +1,14 @@
+export const GAME_DURATION_MS = 2 * 60 * 1000
+export const GAME_TICK_MS = 250
+export const ITEM_VISIBLE_MS = 1400
+export const ITEM_SPAWN_INTERVAL_MS = 700
+export const MAX_ACTIVE_ITEMS = 6
+export const ITEM_SIZE = 112
+export const ITEM_HIT_SLOP = 8
+export const ITEM_SPAWN_PADDING = 24
+export const TARGET_ITEM_SPAWN_CHANCE = 0.35
+export const MAX_SPAWN_ATTEMPTS = 20
+export const FIRESTORE_BATCH_WRITE_LIMIT = 450
+export const CAMERA_CAPTURE_INTERVAL_MS = 500
+export const SESSION_FLUSH_INTERVAL_MS = 5000
+export const SESSION_FLUSH_BATCH_SIZE = 40

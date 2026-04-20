@@ -1,0 +1,147 @@
+/**
+ * Hook: useCameraCapture
+ *
+ * Manages the high-frequency photo capture logic for gameplay analysis.
+ * Uses a dual-trigger strategy: immediate capture when a target appears,
+ * followed by a stable interval-based sampling loop while the target remains visible.
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCameraDevice,
+  useCameraPermission,
+  usePhotoOutput,
+} from 'react-native-vision-camera';
+
+import { CAMERA_CAPTURE_INTERVAL_MS } from '../constants/gameConfig';
+
+interface UseCameraCaptureOptions {
+  enabled: boolean;
+  isCapturing: boolean;
+  captureIntervalMs?: number;
+  onCapture: (path: string, timestampMs: number) => void;
+}
+
+export const useCameraCapture = ({
+  enabled,
+  isCapturing,
+  captureIntervalMs = CAMERA_CAPTURE_INTERVAL_MS,
+  onCapture,
+}: UseCameraCaptureOptions) => {
+  const { hasPermission, requestPermission } = useCameraPermission();
+  const device = useCameraDevice('front');
+  const photoOutput = usePhotoOutput({
+    quality: 0.65,
+    qualityPrioritization: 'speed',
+  });
+  const outputs = useMemo(() => [photoOutput], [photoOutput]);
+  const [isReady, setIsReady] = useState(false);
+
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const captureInFlightRef = useRef(false);
+  const prevIsCapturingRef = useRef(false);
+  const onCaptureRef = useRef(onCapture);
+  const isCapturingRef = useRef(isCapturing);
+  const enabledRef = useRef(enabled);
+
+  useEffect(() => {
+    onCaptureRef.current = onCapture;
+  }, [onCapture]);
+
+  useEffect(() => {
+    isCapturingRef.current = isCapturing;
+  }, [isCapturing]);
+
+  useEffect(() => {
+    enabledRef.current = enabled;
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!hasPermission) {
+      requestPermission().catch(() => {});
+    }
+  }, [hasPermission, requestPermission]);
+
+  const capturePhoto = useCallback(async () => {
+    if (
+      !enabledRef.current ||
+      !isCapturingRef.current ||
+      !hasPermission ||
+      !device ||
+      !isReady ||
+      captureInFlightRef.current
+    ) {
+      return;
+    }
+
+    captureInFlightRef.current = true;
+
+    try {
+      if (!enabledRef.current) return;
+
+      const photo = await photoOutput.capturePhotoToFile(
+        {
+          enableShutterSound: false,
+          flashMode: 'off',
+        },
+        {},
+      );
+      onCaptureRef.current(photo.filePath, Date.now());
+    } catch {
+    } finally {
+      captureInFlightRef.current = false;
+    }
+  }, [device, hasPermission, isReady, photoOutput]);
+
+  useEffect(() => {
+    if (!enabled || !hasPermission || !device || !isReady) {
+      prevIsCapturingRef.current = isCapturing;
+      return;
+    }
+
+    const targetAppeared = isCapturing && !prevIsCapturingRef.current;
+
+    if (targetAppeared) {
+      capturePhoto().catch(() => {});
+    }
+
+    prevIsCapturingRef.current = isCapturing;
+  }, [isCapturing, enabled, hasPermission, device, isReady, capturePhoto]);
+  
+  useEffect(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    if (enabled && isCapturing && hasPermission && device && isReady) {
+      intervalRef.current = setInterval(() => {
+        capturePhoto().catch(() => {});
+      }, captureIntervalMs);
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [
+    captureIntervalMs,
+    capturePhoto,
+    device,
+    enabled,
+    isCapturing,
+    hasPermission,
+    isReady,
+  ]);
+
+  return {
+    hasPermission,
+    device,
+    outputs,
+    isActive: enabled && hasPermission && !!device,
+    handleStarted: () => setIsReady(true),
+    handleStopped: () => setIsReady(false),
+    handleError: () => setIsReady(false),
+  };
+};

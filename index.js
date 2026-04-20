@@ -1,6 +1,7 @@
-/**
- * @format
- */
+import 'react-native-gesture-handler'
+
+// Firebase modular deprecation warnings
+global.RNFB_SILENCE_MODULAR_DEPRECATION_WARNINGS = true;
 
 import { AppRegistry } from 'react-native';
 import App from './App';
