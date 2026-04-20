@@ -9,7 +9,6 @@ export default function SplashScreen({navigation}: SplashScreenProps) {
   const scaleAnim = useRef(new Animated.Value(0.95)).current
 
   useEffect(() => {
-    // Phase 1: Entry Animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -24,7 +23,6 @@ export default function SplashScreen({navigation}: SplashScreenProps) {
       }),
     ]).start()
 
-    // Phase 2: Wait then Navigate
     const timer = setTimeout(() => {
       navigation.replace('Home')
     }, 2500)

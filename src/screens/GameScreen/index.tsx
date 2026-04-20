@@ -90,7 +90,6 @@ export default function GameScreen({navigation, route: _route}: GameScreenProps)
 
   const handleBoardTap = useCallback(
     (event: GestureResponderEvent) => {
-      // Guard against taps during session end transition
       if (status !== 'playing') {
         return
       }

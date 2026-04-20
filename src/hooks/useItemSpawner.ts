@@ -148,7 +148,6 @@ export const useItemSpawner = ({
       return null
     }
 
-    // Determine if we need to avoid an item type (if it appeared twice in a row)
     const [last1, last2] = lastSpawnedItemsRef.current
     const avoidItemId = last1 && last1 === last2 ? last1 : null
 
@@ -169,11 +168,9 @@ export const useItemSpawner = ({
       return null
     }
 
-    // Update history
     lastSpawnedItemsRef.current = [itemType, last1].slice(0, 2)
     lastSlotIdRef.current = nextSlot.id
     itemTimeoutsRef.current[itemEvent.id] = setTimeout(() => {
-      // Re-check status inside timeout to prevent expiration logic after game end
       if (statusRef.current === 'playing') {
         onExpireRef.current(itemEvent.id)
       }

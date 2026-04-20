@@ -3,8 +3,6 @@ import firestore, {
   Timestamp as FirestoreTimestamp,
 } from '@react-native-firebase/firestore'
 
-// Native Firebase auto-initializes using google-services.json
-
 let emulatorConnected = false
 let settingsApplied = false
 

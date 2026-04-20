@@ -56,7 +56,6 @@ export const getRandomNonTargetItemId = (
   )
 
   if (availableItems.length === 0) {
-    // If we somehow excluded everything, just return a default
     return DEFAULT_TARGET_ITEM_ID
   }
 
