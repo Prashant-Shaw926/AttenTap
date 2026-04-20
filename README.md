@@ -2,9 +2,13 @@
 
 **AttenTap** is a high-performance, focus-based tapping game built with React Native. The application challenges users to maintain attention and react quickly to target items while tracking detailed interaction metrics.
 
+## 💡 Why AttenTap?
+
+AttenTap explores how user attention can be measured through interaction patterns and real-time signals. By combining gameplay data with camera capture, it demonstrates a foundation for attention-aware applications.
+
 ## 📱 Project Overview
 
-AttenTap is designed to capture and analyze user attention through a dynamic game loop. Users must tap a specific target item while ignoring distractors, all within a timed session. The app precisely tracks every tap, item appearance, and even captures synchronized camera frames to correlate physical attention with in-game performance.
+AttenTap is designed to capture and analyze user attention through a dynamic game loop. Users must tap a specific target item while ignoring distractors within a timed session. The app precisely tracks every tap, item appearance, and captures synchronized camera frames to analyze user attention during gameplay.
 
 ## ✨ Key Features
 
@@ -42,6 +46,7 @@ We selected **Zustand** over Redux due to:
 ### 2. Firebase Configuration
 1.  Create a project in the [Firebase Console](https://console.firebase.google.com/).
 2.  Add an Android app with package name `com.focusfruit`.
+> Note: The package name remains `com.focusfruit` for Firebase configuration, while the app is branded as AttenTap.
 3.  Download `google-services.json` and place it in `android/app/`.
 4.  Enable **Firestore Database** in Test Mode (or apply secure rules).
 
@@ -49,7 +54,7 @@ We selected **Zustand** over Redux due to:
 ```bash
 # Clone the repository
 git clone <repo-url>
-cd FocusFruit
+cd AttenTap
 
 # Install dependencies
 npm install
@@ -77,6 +82,9 @@ npx react-native run-android
 ### System Permissions
 The app assumes the user will grant **Camera** and **Storage** permission at the first session start. Handling rejection is architectural (app goes into 'Restricted Mode').
 
+## 🎥 Demo
+
+A short demo video showcasing gameplay, tap detection, and result tracking is included in the submission folder.
 ---
 For technical implementation details, see:
 - [Architecture Documentation](docs/architecture.md)
